@@ -43,6 +43,7 @@ export default function InfiniteChallengeCard() {
   const [learningPlan, setLearningPlan] = useState(null);
   const [showHints, setShowHints] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(true);
   const [stats, setStats] = useState({
     completed: 0,
     averageScore: 0,
@@ -371,161 +372,178 @@ export default function InfiniteChallengeCard() {
       <div className="flex-1 flex flex-row gap-0 w-full overflow-hidden bg-background">
         {challenge && (
           <>
-          {!leftPanelCollapsed && (
-          <section className="w-[420px] h-full border-r border-border bg-white dark:bg-[#0f0f0f] flex flex-col">
-            {/* Header con botón de colapsar - Fijo */}
-            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 pb-3 border-b border-border">
-              <div>
-                <h2 className="text-base font-bold text-foreground">{challenge.title}</h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="px-2 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">
-                    {challenge.difficulty}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{challenge.estimatedTimeMinutes} min</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setLeftPanelCollapsed(true)}
-                className="p-1.5 hover:bg-muted rounded transition"
-                title="Expandir editor"
-              >
-                ◀
-              </button>
-            </div>
-
-            {/* Contenedor con scroll para las secciones */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 scrollbar-thin">
-              <div className="flex flex-col gap-3">
-                {/* Description Panel */}
-                <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
-              <button
-                onClick={() => setShowDesc((v) => !v)}
-                className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
-              >
-                <span className="flex items-center gap-2">
-                  📝 Descripción del reto
-                </span>
-                <span className="transition-transform duration-300">{showDesc ? '▼' : '▶'}</span>
-              </button>
-              {showDesc && (
-                <div className="px-3 py-3 border-t border-border animate-fade-in">
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {challenge.description}
-                  </p>
-                </div>
-              )}
-            </section>
-
-              {/* Criteria Panel */}
-              <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
-              <button
-                onClick={() => setShowCriteria((v) => !v)}
-                className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
-              >
-                <span className="flex items-center gap-2">
-                  ✓ Criterios de aceptación
-                </span>
-                <span className="transition-transform duration-300">{showCriteria ? '▼' : '▶'}</span>
-              </button>
-              {showCriteria && (
-                <div className="px-3 py-3 border-t border-border animate-fade-in">
-                  <ul className="space-y-2">
-                    {challenge.acceptanceCriteria?.map((criteria, i) => (
-                      <li
-                        key={i}
-                        className="text-sm text-muted-foreground flex gap-2 items-start"
-                      >
-                        <span className="text-primary mt-0.5">✓</span>
-                        <span>{criteria}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-
-            {/* Examples Panel */}
-            {(challenge.exampleInput || challenge.exampleOutput) && (
-              <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
-                <button
-                  onClick={() => setShowExamples((v) => !v)}
-                  className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
-                >
-                  <span className="flex items-center gap-2">
-                    📋 Ejemplos
-                  </span>
-                  <span className="transition-transform duration-300">{showExamples ? '▼' : '▶'}</span>
-                </button>
-                {showExamples && (
-                  <div className="px-3 py-3 border-t border-border space-y-3 animate-fade-in">
-                    {challenge.exampleInput && (
-                      <div>
-                        <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                          Entrada:
-                        </label>
-                        <code className="block p-2 bg-muted rounded text-xs font-mono text-primary overflow-x-auto">
-                          {challenge.exampleInput}
-                        </code>
-                      </div>
-                    )}
-                    {challenge.exampleOutput && (
-                      <div>
-                        <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                          Salida esperada:
-                        </label>
-                        <code className="block p-2 bg-muted rounded text-xs font-mono text-green-600 dark:text-green-400 overflow-x-auto">
-                          {challenge.exampleOutput}
-                        </code>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* Hints Panel */}
-            {challenge.hints && challenge.hints.length > 0 && (
-              <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
-                <button
-                  onClick={() => setShowHints((v) => !v)}
-                  className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
-                >
-                  <span className="flex items-center gap-2">
-                    💡 Pistas
-                  </span>
-                  <span className="transition-transform duration-300">{showHints ? '▼' : '▶'}</span>
-                </button>
-                {showHints && (
-                  <div className="px-3 py-3 border-t border-border animate-fade-in">
-                    <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                      <ul className="space-y-2">
-                        {challenge.hints.map((hint, i) => (
-                          <li key={i} className="text-sm text-yellow-900 dark:text-yellow-200 flex gap-2 items-start">
-                            <span className="text-yellow-600">💡</span>
-                            <span>{hint}</span>
-                          </li>
-                        ))}
-                      </ul>
+            {!leftPanelCollapsed && (
+              <section className="w-[420px] h-full border-r border-border bg-white dark:bg-[#0f0f0f] flex flex-col">
+                {/* Header con botón de colapsar - Fijo */}
+                <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 pb-3 border-b border-border">
+                  <div>
+                    <h2 className="text-base font-bold text-foreground">
+                      {challenge.title}
+                    </h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="px-2 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">
+                        {challenge.difficulty}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {challenge.estimatedTimeMinutes} min
+                      </span>
                     </div>
                   </div>
-                )}
+                  <button
+                    onClick={() => setLeftPanelCollapsed(true)}
+                    className="p-1.5 hover:bg-muted rounded transition"
+                    title="Expandir editor"
+                  >
+                    ◀
+                  </button>
+                </div>
+
+                {/* Contenedor con scroll para las secciones */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 scrollbar-thin">
+                  <div className="flex flex-col gap-3">
+                    {/* Description Panel */}
+                    <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
+                      <button
+                        onClick={() => setShowDesc((v) => !v)}
+                        className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
+                      >
+                        <span className="flex items-center gap-2">
+                          📝 Descripción del reto
+                        </span>
+                        <span className="transition-transform duration-300">
+                          {showDesc ? "▼" : "▶"}
+                        </span>
+                      </button>
+                      {showDesc && (
+                        <div className="px-3 py-3 border-t border-border animate-fade-in">
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {challenge.description}
+                          </p>
+                        </div>
+                      )}
+                    </section>
+
+                    {/* Criteria Panel */}
+                    <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
+                      <button
+                        onClick={() => setShowCriteria((v) => !v)}
+                        className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
+                      >
+                        <span className="flex items-center gap-2">
+                          ✓ Criterios de aceptación
+                        </span>
+                        <span className="transition-transform duration-300">
+                          {showCriteria ? "▼" : "▶"}
+                        </span>
+                      </button>
+                      {showCriteria && (
+                        <div className="px-3 py-3 border-t border-border animate-fade-in">
+                          <ul className="space-y-2">
+                            {challenge.acceptanceCriteria?.map(
+                              (criteria, i) => (
+                                <li
+                                  key={i}
+                                  className="text-sm text-muted-foreground flex gap-2 items-start"
+                                >
+                                  <span className="text-primary mt-0.5">✓</span>
+                                  <span>{criteria}</span>
+                                </li>
+                              )
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                    </section>
+
+                    {/* Examples Panel */}
+                    {(challenge.exampleInput || challenge.exampleOutput) && (
+                      <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
+                        <button
+                          onClick={() => setShowExamples((v) => !v)}
+                          className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
+                        >
+                          <span className="flex items-center gap-2">
+                            📋 Ejemplos
+                          </span>
+                          <span className="transition-transform duration-300">
+                            {showExamples ? "▼" : "▶"}
+                          </span>
+                        </button>
+                        {showExamples && (
+                          <div className="px-3 py-3 border-t border-border space-y-3 animate-fade-in">
+                            {challenge.exampleInput && (
+                              <div>
+                                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                                  Entrada:
+                                </label>
+                                <code className="block p-2 bg-muted rounded text-xs font-mono text-primary overflow-x-auto">
+                                  {challenge.exampleInput}
+                                </code>
+                              </div>
+                            )}
+                            {challenge.exampleOutput && (
+                              <div>
+                                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                                  Salida esperada:
+                                </label>
+                                <code className="block p-2 bg-muted rounded text-xs font-mono text-green-600 dark:text-green-400 overflow-x-auto">
+                                  {challenge.exampleOutput}
+                                </code>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </section>
+                    )}
+
+                    {/* Hints Panel */}
+                    {challenge.hints && challenge.hints.length > 0 && (
+                      <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
+                        <button
+                          onClick={() => setShowHints((v) => !v)}
+                          className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
+                        >
+                          <span className="flex items-center gap-2">
+                            💡 Pistas
+                          </span>
+                          <span className="transition-transform duration-300">
+                            {showHints ? "▼" : "▶"}
+                          </span>
+                        </button>
+                        {showHints && (
+                          <div className="px-3 py-3 border-t border-border animate-fade-in">
+                            <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                              <ul className="space-y-2">
+                                {challenge.hints.map((hint, i) => (
+                                  <li
+                                    key={i}
+                                    className="text-sm text-yellow-900 dark:text-yellow-200 flex gap-2 items-start"
+                                  >
+                                    <span className="text-yellow-600">💡</span>
+                                    <span>{hint}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        )}
+                      </section>
+                    )}
+                  </div>
+                </div>
               </section>
             )}
-              </div>
-            </div>
-          </section>
-          )}
 
-          {/* Botón para expandir panel izquierdo cuando está colapsado */}
-          {leftPanelCollapsed && (
-            <button
-              onClick={() => setLeftPanelCollapsed(false)}
-              className="w-8 flex-shrink-0 bg-white dark:bg-[#1a1a1a] border-r border-border hover:bg-muted transition flex items-center justify-center"
-              title="Mostrar descripción"
-            >
-              ▶
-            </button>
-          )}
+            {/* Botón para expandir panel izquierdo cuando está colapsado */}
+            {leftPanelCollapsed && (
+              <button
+                onClick={() => setLeftPanelCollapsed(false)}
+                className="w-8 flex-shrink-0 bg-white dark:bg-[#1a1a1a] border-r border-border hover:bg-muted transition flex items-center justify-center"
+                title="Mostrar descripción"
+              >
+                ▶
+              </button>
+            )}
           </>
         )}
 
@@ -535,7 +553,9 @@ export default function InfiniteChallengeCard() {
             {/* Editor Header */}
             <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 bg-[#2d2d2d] border-b border-[#3e3e3e]">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-semibold">{challenge.language}</span>
+                <span className="text-xs text-gray-400 font-semibold">
+                  {challenge.language}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 {/* Theme Selector */}
@@ -604,45 +624,92 @@ export default function InfiniteChallengeCard() {
               )}
             </div>
 
-            {/* Evaluation Feedback - Expandido y visible */}
+            {/* Evaluation Feedback - Colapsable */}
             {evaluation && (
-              <div className="flex-shrink-0 max-h-[40vh] overflow-y-auto bg-[#1e1e1e] border-t border-[#3e3e3e] p-4 scrollbar-thin">
-                <div
-                  className={`rounded-lg border-l-4 p-4 ${
-                    evaluation.success
-                      ? "bg-green-900/20 border-green-500"
-                      : "bg-red-900/20 border-red-500"
-                  }`}
+              <div className="flex-shrink-0 bg-[#1e1e1e] border-t border-[#3e3e3e]">
+                {/* Header colapsable del feedback */}
+                <button
+                  onClick={() => setShowFeedback(!showFeedback)}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-[#2d2d2d] hover:bg-[#3e3e3e] transition-all"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className={`text-lg font-bold ${
-                      evaluation.success ? "text-green-400" : "text-red-400"
-                    }`}>
-                      {evaluation.success ? "✓ Código Aprobado" : "✗ Código Rechazado"}
-                    </h3>
-                    <span className={`text-2xl font-bold ${
-                      evaluation.success ? "text-green-400" : "text-red-400"
-                    }`}>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-sm font-bold ${
+                        evaluation.success ? "text-green-400" : "text-red-400"
+                      }`}
+                    >
+                      {evaluation.success ? "✓ Aprobado" : "✗ Rechazado"}
+                    </span>
+                    <span
+                      className={`text-sm font-bold ${
+                        evaluation.success ? "text-green-400" : "text-red-400"
+                      }`}
+                    >
                       {evaluation.score}%
                     </span>
                   </div>
-                  
-                  <p className="text-sm text-gray-300 mb-3">{evaluation.feedback}</p>
+                  <span
+                    className="text-gray-400 transition-transform duration-300"
+                    style={{
+                      transform: showFeedback
+                        ? "rotate(180deg)"
+                        : "rotate(0deg)",
+                    }}
+                  >
+                    ▼
+                  </span>
+                </button>
 
-                  {evaluation.suggestions && evaluation.suggestions.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-gray-700">
-                      <h4 className="text-sm font-semibold text-gray-300 mb-2">💡 Sugerencias:</h4>
-                      <ul className="space-y-1">
-                        {evaluation.suggestions.map((suggestion, i) => (
-                          <li key={i} className="text-sm text-gray-400 flex gap-2 items-start">
-                            <span className="text-blue-400">•</span>
-                            <span>{suggestion}</span>
-                          </li>
-                        ))}
-                      </ul>
+                {/* Contenido del feedback */}
+                {showFeedback && (
+                  <div className="max-h-[40vh] overflow-y-auto p-4 scrollbar-thin animate-fade-in">
+                    <div
+                      className={`rounded-lg border-l-4 p-4 ${
+                        evaluation.success
+                          ? "bg-green-900/20 border-green-500"
+                          : "bg-red-900/20 border-red-500"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h3
+                          className={`text-lg font-bold ${
+                            evaluation.success
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }`}
+                        >
+                          {evaluation.success
+                            ? "✓ Código Aprobado"
+                            : "✗ Código Rechazado"}
+                        </h3>
+                      </div>
+
+                      <p className="text-sm text-gray-300 mb-3">
+                        {evaluation.feedback}
+                      </p>
+
+                      {evaluation.suggestions &&
+                        evaluation.suggestions.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-700">
+                            <h4 className="text-sm font-semibold text-gray-300 mb-2">
+                              💡 Sugerencias:
+                            </h4>
+                            <ul className="space-y-1">
+                              {evaluation.suggestions.map((suggestion, i) => (
+                                <li
+                                  key={i}
+                                  className="text-sm text-gray-400 flex gap-2 items-start"
+                                >
+                                  <span className="text-blue-400">•</span>
+                                  <span>{suggestion}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </section>
