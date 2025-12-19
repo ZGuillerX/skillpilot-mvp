@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "ai": "^5.0.15",
     "groq-sdk": "^0.30.0",
     "lightningcss": "^1.30.1",

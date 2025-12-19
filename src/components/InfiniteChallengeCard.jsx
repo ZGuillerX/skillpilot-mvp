@@ -1,5 +1,19 @@
 "use client";
 import { useState, useEffect } from "react";
+// Temas populares compatibles con Monaco Editor
+const MONACO_THEMES = [
+  { name: "Visual Studio Dark", value: "vs-dark", color: "#1e1e1e" },
+  { name: "Visual Studio Light", value: "vs-light", color: "#fff" },
+  { name: "GitHub Dark", value: "github-dark", color: "#0d1117" },
+  { name: "GitHub Light", value: "github-light", color: "#fff" },
+  { name: "Dracula", value: "dracula", color: "#282a36" },
+  { name: "Monokai", value: "monokai", color: "#272822" },
+  { name: "Solarized Dark", value: "solarized-dark", color: "#002b36" },
+  { name: "Solarized Light", value: "solarized-light", color: "#fdf6e3" },
+  { name: "One Dark", value: "onedark", color: "#282c34" },
+  { name: "Nord", value: "nord", color: "#2e3440" },
+];
+import Editor from "@/components/Editor";
 import {
   getCurrentChallengeIndex,
   setCurrentChallengeIndex,
@@ -13,6 +27,8 @@ import {
 } from "@/lib/challengeManager";
 
 export default function InfiniteChallengeCard() {
+  // Estado para mostrar/ocultar el selector de tema
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [challenge, setChallenge] = useState(null);
   const [code, setCode] = useState("");
@@ -27,6 +43,8 @@ export default function InfiniteChallengeCard() {
     averageScore: 0,
     totalAttempts: 0,
   });
+  // Tema del editor, por defecto vs-dark
+  const [editorTheme, setEditorTheme] = useState("vs-dark");
 
   useEffect(() => {
     // Cargar estado inicial
@@ -202,10 +220,24 @@ export default function InfiniteChallengeCard() {
   if (!learningPlan) {
     return (
       <div className="bg-card border border-border rounded-xl p-8 text-center">
-        <div className={`w-16 h-16 ${isCompleted ? 'bg-green-100' : 'bg-muted'} rounded-full flex items-center justify-center mx-auto mb-4`}>
+        <div
+          className={`w-16 h-16 ${
+            isCompleted ? "bg-green-100" : "bg-muted"
+          } rounded-full flex items-center justify-center mx-auto mb-4`}
+        >
           {isCompleted ? (
-            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg
+              className="w-8 h-8 text-green-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
           ) : (
             <svg
@@ -312,8 +344,18 @@ export default function InfiniteChallengeCard() {
             >
               {challenge.difficulty}
               {isCompleted && (
-                <svg className="w-4 h-4 ml-1 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-4 h-4 ml-1 text-green-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               )}
             </div>
@@ -353,10 +395,22 @@ export default function InfiniteChallengeCard() {
           {/* Estado de completado */}
           {isCompleted && (
             <div className="flex items-center gap-2 text-sm text-green-600 bg-green-100 p-3 rounded-lg mb-4">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
-              <span>¡Reto completado! Puedes reintentarlo para practicar más.</span>
+              <span>
+                ¡Reto completado! Puedes reintentarlo para practicar más.
+              </span>
             </div>
           )}
 
@@ -447,9 +501,40 @@ export default function InfiniteChallengeCard() {
           <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-card-foreground">
-                  Tu solución en {challenge.language}:
-                </label>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-semibold text-card-foreground">
+                    Tu solución en {challenge.language}:
+                  </label>
+                  {/* Icono de configuración para mostrar el selector de tema */}
+                  <button
+                    type="button"
+                    onClick={() => setShowThemeSelector((v) => !v)}
+                    className="ml-2 p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    aria-label="Configurar tema de color"
+                  >
+                    <svg
+                      className="w-5 h-5 text-muted-foreground"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        fill="none"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6v6l4 2"
+                      />
+                    </svg>
+                  </button>
+                </div>
                 {challenge.hints && challenge.hints.length > 0 && (
                   <button
                     onClick={() => setShowHints(!showHints)}
@@ -460,17 +545,50 @@ export default function InfiniteChallengeCard() {
                 )}
               </div>
 
-              <textarea
+              {/* Selector de tema de color, solo visible si showThemeSelector */}
+              {showThemeSelector && (
+                <div className="mb-3">
+                  <label className="block text-xs font-semibold mb-1 text-muted-foreground">
+                    Extensiones de color:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {MONACO_THEMES.map((theme) => (
+                      <button
+                        key={theme.value}
+                        type="button"
+                        onClick={() => setEditorTheme(theme.value)}
+                        className={`flex items-center gap-2 px-3 py-1 rounded border text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                          editorTheme === theme.value
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background border-border text-foreground hover:bg-muted"
+                        }`}
+                        style={{
+                          backgroundColor:
+                            editorTheme === theme.value
+                              ? theme.color
+                              : undefined,
+                        }}
+                        aria-label={`Tema ${theme.name}`}
+                      >
+                        <span
+                          className="inline-block w-4 h-4 rounded-full border mr-1"
+                          style={{
+                            backgroundColor: theme.color,
+                            borderColor: "#ccc",
+                          }}
+                        ></span>
+                        {theme.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Editor
+                language={challenge.language?.toLowerCase() || "javascript"}
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder={`Escribe tu código aquí...\n\n// Ejemplo:\n${
-                  challenge.language === "JavaScript"
-                    ? "function solucion() {\n  // tu código aquí\n}"
-                    : challenge.language === "Python"
-                    ? "def solucion():\n    # tu código aquí\n    pass"
-                    : "// tu código aquí"
-                }`}
-                className="w-full h-48 p-4 border border-border rounded-lg font-mono text-sm bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent resize-y"
+                onChange={setCode}
+                height="200px"
+                theme={editorTheme}
               />
             </div>
 
@@ -655,30 +773,31 @@ export default function InfiniteChallengeCard() {
                     </p>
                   </div>
 
-                  {evaluation.suggestions && evaluation.suggestions.length > 0 && (
-                    <div>
-                      <h5
-                        className={`font-medium mb-2 ${
-                          evaluation.success
-                            ? "text-green-700 dark:text-green-300"
-                            : "text-red-700 dark:text-red-300"
-                        }`}
-                      >
-                        Sugerencias
-                      </h5>
-                      <ul
-                        className={`list-disc list-inside text-sm space-y-1 ${
-                          evaluation.success
-                            ? "text-green-600 dark:text-green-300"
-                            : "text-red-600 dark:text-red-300"
-                        }`}
-                      >
-                        {evaluation.suggestions.map((suggestion, i) => (
-                          <li key={i}>{suggestion}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {evaluation.suggestions &&
+                    evaluation.suggestions.length > 0 && (
+                      <div>
+                        <h5
+                          className={`font-medium mb-2 ${
+                            evaluation.success
+                              ? "text-green-700 dark:text-green-300"
+                              : "text-red-700 dark:text-red-300"
+                          }`}
+                        >
+                          Sugerencias
+                        </h5>
+                        <ul
+                          className={`list-disc list-inside text-sm space-y-1 ${
+                            evaluation.success
+                              ? "text-green-600 dark:text-green-300"
+                              : "text-red-600 dark:text-red-300"
+                          }`}
+                        >
+                          {evaluation.suggestions.map((suggestion, i) => (
+                            <li key={i}>{suggestion}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                 </div>
               </div>
             )}
