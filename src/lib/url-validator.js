@@ -17,8 +17,7 @@ export async function validateUrl(url, expectedContent = "") {
 
     const isValid = response.ok && response.status < 400;
     console.log(
-      `[v0] URL validation for ${url}: ${isValid ? "SUCCESS" : "FAILED"} (${
-        response.status
+      `[v0] URL validation for ${url}: ${isValid ? "SUCCESS" : "FAILED"} (${response.status
       })`
     );
 
@@ -99,7 +98,7 @@ async function checkContentRelevance(content, expectedTopic) {
 export async function validateAndFixResource(resource) {
   if (!resource || !resource.url) {
     console.log(
-      `[v0] ❌ Resource missing URL, skipping: ${resource?.title || "Unknown"}`
+      `[v0]  Resource missing URL, skipping: ${resource?.title || "Unknown"}`
     );
     return null; // Return null instead of fallback
   }
@@ -114,7 +113,7 @@ export async function validateAndFixResource(resource) {
   }
 
   console.log(
-    `[v0] ❌ URL failed validation, removing resource: ${resource.url}`
+    `[v0]  URL failed validation, removing resource: ${resource.url}`
   );
   return null; // Return null instead of fallback - force AI to generate better URLs
 }

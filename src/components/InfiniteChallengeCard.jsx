@@ -408,7 +408,7 @@ export default function InfiniteChallengeCard() {
                         className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
                       >
                         <span className="flex items-center gap-2">
-                          📝 Descripción del reto
+                          Descripción del reto
                         </span>
                         <span className="transition-transform duration-300">
                           {showDesc ? "▼" : "▶"}

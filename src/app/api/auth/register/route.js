@@ -5,13 +5,13 @@ import { hashPassword, generateToken, generateId, getTokenExpiration } from '@/l
 export async function POST(request) {
     try {
         const body = await request.json();
-        console.log('📝 Datos recibidos:', body);
+        console.log('Datos recibidos:', body);
 
         const { email, password, name } = body;
 
         // Validaciones
         if (!email || !password || !name) {
-            console.log('❌ Campos faltantes:', { email: !!email, password: !!password, name: !!name });
+            console.log(' Campos faltantes:', { email: !!email, password: !!password, name: !!name });
             return NextResponse.json(
                 { error: 'Todos los campos son requeridos' },
                 { status: 400 }
@@ -19,7 +19,7 @@ export async function POST(request) {
         }
 
         if (password.length < 6) {
-            console.log('❌ Contraseña muy corta:', password.length);
+            console.log(' Contraseña muy corta:', password.length);
             return NextResponse.json(
                 { error: 'La contraseña debe tener al menos 6 caracteres' },
                 { status: 400 }
@@ -28,7 +28,7 @@ export async function POST(request) {
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            console.log('❌ Email inválido:', email);
+            console.log(' Email inválido:', email);
             return NextResponse.json(
                 { error: 'Email inválido' },
                 { status: 400 }
