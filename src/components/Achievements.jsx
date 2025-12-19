@@ -1,6 +1,9 @@
 "use client";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AnimatedBadge } from "./ui/Animations";
+import { toast } from "sonner";
+import eventEmitter, { EVENTS } from "@/lib/events";
 import {
   TargetIcon,
   FireIcon,
@@ -131,6 +134,28 @@ export function checkAchievements(stats, history) {
     unlocked.push(ACHIEVEMENTS.multiLanguage);
   }
 
+  // Reto rápido (menos de 5 minutos = 300 segundos)
+  const hasFastSolve = history.some(
+    (entry) =>
+      entry.evaluation?.success && entry.timeSpent && entry.timeSpent < 300
+  );
+  if (hasFastSolve) {
+    unlocked.push(ACHIEVEMENTS.fastSolver);
+  }
+
+  // Rachas (implementación básica - detectar días consecutivos)
+  const completedDates = history
+    .filter((entry) => entry.completedAt)
+    .map((entry) => new Date(entry.completedAt).toDateString());
+  const uniqueDates = [...new Set(completedDates)];
+
+  if (uniqueDates.length >= 3) {
+    unlocked.push(ACHIEVEMENTS.streak3);
+  }
+  if (uniqueDates.length >= 7) {
+    unlocked.push(ACHIEVEMENTS.streak7);
+  }
+
   return unlocked;
 }
 
@@ -195,8 +220,66 @@ export function Badge({ achievement, unlocked = false, delay = 0 }) {
  * Grid de logros
  */
 export default function AchievementsGrid({ stats = {}, history = [] }) {
+  const [previousUnlockedIds, setPreviousUnlockedIds] = useState(new Set());
   const unlockedAchievements = checkAchievements(stats, history);
   const unlockedIds = new Set(unlockedAchievements.map((a) => a.id));
+
+  // Detectar nuevos logros desbloqueados
+  useEffect(() => {
+    // Convertir Sets a arrays para comparar
+    const currentIds = Array.from(unlockedIds);
+    const previousIds = Array.from(previousUnlockedIds);
+
+    // Encontrar logros nuevos
+    const newIds = currentIds.filter((id) => !previousUnlockedIds.has(id));
+
+    console.log("📊 Estado de logros:", {
+      statsCompleted: stats.completed,
+      historyLength: history.length,
+      current: currentIds,
+      previous: previousIds,
+      new: newIds,
+      previousSize: previousUnlockedIds.size
+    });
+
+    // Solo mostrar notificaciones si ya había logros previos (no es la primera carga)
+    if (newIds.length > 0 && previousUnlockedIds.size > 0) {
+      // Mostrar notificación para cada nuevo logro
+      newIds.forEach((achievementId) => {
+        const achievement = unlockedAchievements.find(
+          (a) => a.id === achievementId
+        );
+        if (achievement) {
+          console.log("🎉 MOSTRANDO NOTIFICACIÓN:", achievement.title);
+          toast.success(`🏆 ¡Logro desbloqueado: ${achievement.title}!`, {
+            description: achievement.description,
+            duration: 5000,
+          });
+        }
+      });
+    } else if (previousUnlockedIds.size === 0) {
+      console.log("💾 Primera carga - guardando logros iniciales sin notificaciones");
+    }
+
+    // Actualizar el set de logros previos
+    setPreviousUnlockedIds(new Set(currentIds));
+  }, [stats.completed, history.length, unlockedAchievements.length]); // Más dependencias para mejor detección
+
+  // Escuchar eventos de retos completados para recalcular logros
+  useEffect(() => {
+    const handleChallengeEvent = () => {
+      // Los logros se recalcularán automáticamente cuando cambien stats/history
+      console.log("🔄 Recalculando logros...");
+    };
+
+    eventEmitter.on(EVENTS.CHALLENGE_COMPLETED, handleChallengeEvent);
+    eventEmitter.on(EVENTS.CHALLENGE_SAVED, handleChallengeEvent);
+
+    return () => {
+      eventEmitter.off(EVENTS.CHALLENGE_COMPLETED, handleChallengeEvent);
+      eventEmitter.off(EVENTS.CHALLENGE_SAVED, handleChallengeEvent);
+    };
+  }, []);
 
   const allAchievements = Object.values(ACHIEVEMENTS);
   const unlockedCount = unlockedAchievements.length;

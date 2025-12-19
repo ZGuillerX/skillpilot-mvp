@@ -54,7 +54,7 @@ export default function ChallengeCard({ challenge }) {
   return (
     <div className="p-6 bg-white rounded-xl shadow border">
       <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-        🚀 Reto inicial
+         Reto inicial
       </h2>
 
       <div className="p-4 border rounded-lg bg-gray-50 mb-6">

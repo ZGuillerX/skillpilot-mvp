@@ -63,7 +63,7 @@ export async function POST(req) {
       );
     }
 
-    // 🚀 ahora usamos askAI en lugar de askJSON
+    //  ahora usamos askAI en lugar de askJSON
     const aiRaw = await askAI({
       system: SYSTEM_PLAN,
       user: { goal, experience: experience || "" },

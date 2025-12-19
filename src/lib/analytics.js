@@ -31,7 +31,7 @@ class Analytics {
             this.events.shift();
         }
 
-        console.log(`📊 Analytics: ${category}.${action}`, metadata);
+        console.log(` Analytics: ${category}.${action}`, metadata);
     }
 
     /**

@@ -1,6 +1,7 @@
 import { Montserrat, Open_Sans } from "next/font/google";
 import "./global.css";
 import Navbar from "@/components/Navbar";
+import AchievementListener from "@/components/AchievementListener";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/Toaster";
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }) {
         className={`${montserrat.variable} ${openSans.variable} antialiased bg-background text-foreground`}
       >
         <AuthProvider>
+          <AchievementListener />
           <main>
             <Navbar />
             {children}

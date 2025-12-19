@@ -17,6 +17,10 @@ const MONACO_THEMES = [
 
 import Editor from "@/components/Editor";
 import {
+  trackChallengeCompleted,
+  trackChallengeStarted,
+} from "@/lib/analytics";
+import {
   getCurrentChallengeIndex,
   setCurrentChallengeIndex,
   getChallengeFromHistory,
@@ -51,6 +55,15 @@ export default function InfiniteChallengeCard() {
     totalAttempts: 0,
   });
   const [editorTheme, setEditorTheme] = useState("vs-dark");
+  const [timer, setTimer] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [challengeStartTime, setChallengeStartTime] = useState(null);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const updateStats = async () => {
     const [completed, averageScore, totalAttempts] = await Promise.all([
@@ -64,6 +77,9 @@ export default function InfiniteChallengeCard() {
   const loadChallenge = async (index) => {
     setIsLoading(true);
     setIsCompleted(false);
+    setTimer(0);
+    setTimerRunning(true);
+    setChallengeStartTime(Date.now());
     try {
       setCurrentChallengeIndex(index);
       setCurrentIndex(index);
@@ -79,6 +95,12 @@ export default function InfiniteChallengeCard() {
         setCode("");
         setEvaluation(null);
         setIsCompleted(false);
+        // Track inicio del reto
+        trackChallengeStarted(
+          newChallenge.id,
+          newChallenge.language,
+          newChallenge.difficulty
+        );
       }
       await updateStats();
     } catch (error) {
@@ -145,9 +167,26 @@ export default function InfiniteChallengeCard() {
 
       if (result.success) {
         setIsCompleted(true);
+        setTimerRunning(false);
+        // Track completado del reto
+        const timeSpentSeconds = Math.floor(
+          (Date.now() - challengeStartTime) / 1000
+        );
+        trackChallengeCompleted(
+          challenge.id,
+          result.score,
+          1, // attempts
+          timeSpentSeconds * 1000, // convertir a milisegundos para analytics
+          showHints ? 1 : 0 // hints usados
+        );
       }
 
       if (challenge && result) {
+        const timeSpentSeconds = Math.floor(
+          (Date.now() - challengeStartTime) / 1000
+        );
+        result.timeSpent = timeSpentSeconds;
+        result.hintsUsed = showHints ? 1 : 0;
         await saveChallengeToHistory(challenge, code, result);
         await updateStats();
       }
@@ -174,6 +213,9 @@ export default function InfiniteChallengeCard() {
     setCode("");
     setEvaluation(null);
     setShowHints(false);
+    setTimer(0);
+    setTimerRunning(true);
+    setChallengeStartTime(Date.now());
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -199,6 +241,19 @@ export default function InfiniteChallengeCard() {
     };
     loadData();
   }, []);
+
+  // Cronómetro
+  useEffect(() => {
+    let interval;
+    if (timerRunning) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerRunning]);
 
   if (!learningPlan) {
     return (
@@ -327,6 +382,32 @@ export default function InfiniteChallengeCard() {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Cronómetro */}
+            <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-blue-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span
+                  className={`text-sm font-bold ${
+                    timerRunning ? "text-blue-500" : "text-gray-500"
+                  }`}
+                >
+                  {formatTime(timer)}
+                </span>
+              </div>
             </div>
 
             <button

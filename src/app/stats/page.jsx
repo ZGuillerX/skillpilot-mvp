@@ -9,12 +9,14 @@ import AchievementsGrid from "@/components/Achievements";
 import { FadeIn } from "@/components/ui/Animations";
 import { toast } from "sonner";
 import { ChartIcon, TrophyIcon } from "@/components/ui/Icons";
+import eventEmitter, { EVENTS } from "@/lib/events";
 
 export default function StatsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("analytics"); // analytics | achievements
 
   useEffect(() => {
@@ -26,18 +28,53 @@ export default function StatsPage() {
       return;
     }
     loadProgress();
+
+    // Actualizar estadísticas cada 10 segundos
+    const interval = setInterval(() => {
+      loadProgress(true); // Silencioso, sin loading spinner
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [user, authLoading, router]);
 
-  const loadProgress = async () => {
+  // Listener para actualizar en tiempo real cuando se completa un reto
+  useEffect(() => {
+    const handleChallengeEvent = () => {
+      console.log("🔄 Challenge event detected, refreshing stats...");
+      loadProgress(true); // Actualización silenciosa
+    };
+
+    eventEmitter.on(EVENTS.CHALLENGE_COMPLETED, handleChallengeEvent);
+    eventEmitter.on(EVENTS.CHALLENGE_SAVED, handleChallengeEvent);
+
+    return () => {
+      eventEmitter.off(EVENTS.CHALLENGE_COMPLETED, handleChallengeEvent);
+      eventEmitter.off(EVENTS.CHALLENGE_SAVED, handleChallengeEvent);
+    };
+  }, []);
+
+  const loadProgress = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await getUserProgress();
       setProgress(data);
     } catch (error) {
       console.error("Error loading progress:", error);
-      toast.error("Error al cargar las estadísticas");
+      if (!silent) toast.error("Error al cargar las estadísticas");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadProgress(true);
+      toast.success("Estadísticas actualizadas");
+    } catch (error) {
+      toast.error("Error al actualizar");
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -106,7 +143,34 @@ export default function StatsPage() {
                 )}
               </div>
 
-              {/* Tabs */}
+              {/* Tabs y botón de refresh */}
+              <div className="flex gap-2">
+                {/* Botón de actualizar */}
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="p-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors disabled:opacity-50"
+                  title="Actualizar estadísticas"
+                >
+                  <svg
+                    className={`w-5 h-5 text-foreground ${
+                      refreshing ? "animate-spin" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                </button>
+
+                {/* Tabs */}
+              </div>
               <div className="flex gap-2 bg-muted p-1 rounded-lg">
                 <button
                   onClick={() => setActiveTab("analytics")}

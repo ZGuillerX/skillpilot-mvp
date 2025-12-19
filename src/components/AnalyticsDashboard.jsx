@@ -12,6 +12,7 @@ import {
   FilmIcon,
   RocketIcon,
   LightBulbIcon,
+  ClockIcon,
 } from "./ui/Icons";
 
 /**
@@ -40,6 +41,20 @@ export default function AnalyticsDashboard({ stats, history }) {
       ? Math.round((stats.completed / stats.totalAttempts) * 100)
       : 0;
 
+  // Calcular tiempo promedio de retos completados
+  const completedChallenges = history.filter(
+    (entry) => entry.completedAt && entry.timeSpent
+  );
+  const averageTime =
+    completedChallenges.length > 0
+      ? Math.round(
+          completedChallenges.reduce(
+            (sum, entry) => sum + (entry.timeSpent || 0),
+            0
+          ) / completedChallenges.length
+        )
+      : 0;
+
   const recentChallenges = history.slice(-10).reverse();
 
   return (
@@ -53,7 +68,7 @@ export default function AnalyticsDashboard({ stats, history }) {
       </FadeIn>
 
       {/* Métricas principales en cards */}
-      <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <StaggerItem>
           <MetricCard
             title="Retos Completados"
@@ -87,6 +102,21 @@ export default function AnalyticsDashboard({ stats, history }) {
             value={`${successRate}%`}
             IconComponent={TrendingUpIcon}
             color="from-purple-500 to-pink-500"
+          />
+        </StaggerItem>
+
+        <StaggerItem>
+          <MetricCard
+            title="Tiempo Promedio"
+            value={
+              averageTime > 0
+                ? `${Math.floor(averageTime / 60)}:${(averageTime % 60)
+                    .toString()
+                    .padStart(2, "0")}`
+                : "0:00"
+            }
+            IconComponent={ClockIcon}
+            color="from-orange-500 to-red-500"
           />
         </StaggerItem>
       </StaggerContainer>

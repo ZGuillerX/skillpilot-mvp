@@ -1,6 +1,7 @@
 // Gestión de estado de retos desde BD
 import { saveCompletedChallengeToDB, getUserProgress, saveLearningPlanToDB, checkPlanLimit } from './userProgress';
 import challengeCache from './challengeCache';
+import eventEmitter, { EVENTS } from './events';
 
 // Obtener historial de retos desde BD
 export async function getChallengeHistory() {
@@ -93,6 +94,8 @@ export async function saveChallengeToHistory(
       attempts: 1,
       savedAt: new Date().toISOString(),
       planId: learningPlan.id, // Asociar reto con plan usando 'id'
+      timeSpent: evaluation?.timeSpent || 0, // Tiempo en segundos
+      hintsUsed: evaluation?.hintsUsed || 0, // Número de pistas usadas
     };
 
     console.log(
@@ -106,7 +109,23 @@ export async function saveChallengeToHistory(
 
     // Guardar directamente en BD
     const result = await saveCompletedChallengeToDB(challengeEntry);
-    console.log(' Challenge saved result:', result);
+    console.log('✅ Challenge saved result:', result);
+
+    // Emitir evento para actualizar estadísticas en tiempo real
+    eventEmitter.emit(EVENTS.CHALLENGE_SAVED, {
+      challengeId: challenge.id,
+      success: evaluation?.success,
+      score: evaluation?.score,
+      planId: learningPlan.id
+    });
+
+    if (evaluation?.success) {
+      eventEmitter.emit(EVENTS.CHALLENGE_COMPLETED, {
+        challengeId: challenge.id,
+        score: evaluation?.score,
+        planId: learningPlan.id
+      });
+    }
   } catch (error) {
     console.error("Error saving challenge to history:", error);
   }
@@ -137,17 +156,17 @@ export async function getCompletedChallengesCount() {
     const history = await getChallengeHistory();
     const learningPlan = await getLearningPlan();
 
-    console.log('📊 getCompletedChallengesCount - Total history:', history.length, 'Current plan:', learningPlan?.id);
+    console.log(' getCompletedChallengesCount - Total history:', history.length, 'Current plan:', learningPlan?.id);
 
     // Contar solo retos del plan actual
     const planChallenges = learningPlan?.id
       ? history.filter(entry => entry.planId === learningPlan.id)
       : history;
 
-    console.log('📊 Plan challenges:', planChallenges.length);
+    console.log(' Plan challenges:', planChallenges.length);
 
     const completed = planChallenges.filter((entry) => entry.evaluation?.success).length;
-    console.log('📊 Completed:', completed);
+    console.log(' Completed:', completed);
 
     return completed;
   } catch (error) {
@@ -254,7 +273,7 @@ export async function getTotalAttempts() {
     const history = await getChallengeHistory();
     const learningPlan = await getLearningPlan();
 
-    console.log('📊 getTotalAttempts - Current plan:', learningPlan?.id);
+    console.log(' getTotalAttempts - Current plan:', learningPlan?.id);
 
     // Contar solo retos del plan actual
     const planChallenges = learningPlan?.id
@@ -262,7 +281,7 @@ export async function getTotalAttempts() {
       : history;
 
     const total = planChallenges.reduce((total, entry) => total + (entry.attempts || 0), 0);
-    console.log('📊 Total attempts:', total);
+    console.log(' Total attempts:', total);
     return total;
   } catch (error) {
     console.error('Error in getTotalAttempts:', error);
@@ -277,7 +296,7 @@ export async function getAverageScore() {
     const history = await getChallengeHistory();
     const learningPlan = await getLearningPlan();
 
-    console.log('📊 getAverageScore - Current plan:', learningPlan?.id);
+    console.log(' getAverageScore - Current plan:', learningPlan?.id);
 
     // Calcular solo para retos del plan actual
     const planChallenges = learningPlan?.id
@@ -291,13 +310,13 @@ export async function getAverageScore() {
       )
       .map((entry) => entry.evaluation.score);
 
-    console.log('📊 Evaluations for average:', evaluations);
+    console.log(' Evaluations for average:', evaluations);
 
     if (evaluations.length === 0) return 0;
 
     const sum = evaluations.reduce((total, score) => total + score, 0);
     const avg = Math.round(sum / evaluations.length);
-    console.log('📊 Average score:', avg);
+    console.log(' Average score:', avg);
     return avg;
   } catch (error) {
     console.error('Error in getAverageScore:', error);

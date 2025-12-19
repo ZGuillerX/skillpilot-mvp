@@ -9,6 +9,7 @@ import {
   deleteLearningPlan,
 } from "@/lib/userProgress";
 import { useRouter } from "next/navigation";
+import eventEmitter, { EVENTS } from "@/lib/events";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -21,6 +22,29 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProgress();
+
+    // Actualizar cada 15 segundos
+    const interval = setInterval(() => {
+      loadProgress();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Listener para actualizar en tiempo real cuando se completa un reto
+  useEffect(() => {
+    const handleChallengeEvent = () => {
+      console.log("🔄 Challenge event detected, refreshing profile...");
+      loadProgress(); // Actualización silenciosa
+    };
+
+    eventEmitter.on(EVENTS.CHALLENGE_COMPLETED, handleChallengeEvent);
+    eventEmitter.on(EVENTS.CHALLENGE_SAVED, handleChallengeEvent);
+
+    return () => {
+      eventEmitter.off(EVENTS.CHALLENGE_COMPLETED, handleChallengeEvent);
+      eventEmitter.off(EVENTS.CHALLENGE_SAVED, handleChallengeEvent);
+    };
   }, []);
 
   const loadProgress = async () => {
