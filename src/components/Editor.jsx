@@ -108,6 +108,7 @@ const Editor = ({
       }
     });
   };
+
   return (
     <MonacoEditor
       height={height}
@@ -116,11 +117,19 @@ const Editor = ({
       onChange={onChange}
       theme={theme}
       beforeMount={handleBeforeMount}
+      loading={
+        <div className="flex items-center justify-center h-full bg-[#1e1e1e]">
+          <div className="text-white text-sm">Cargando editor...</div>
+        </div>
+      }
       options={{
-        fontSize: 16,
+        fontSize: 14,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         wordWrap: "on",
+        lineNumbers: "on",
+        automaticLayout: true,
+        tabSize: 2,
       }}
     />
   );

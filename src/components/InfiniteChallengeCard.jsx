@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-// Temas populares compatibles con Monaco Editor
+
 const MONACO_THEMES = [
   { name: "Visual Studio Dark", value: "vs-dark", color: "#1e1e1e" },
   { name: "Visual Studio Light", value: "vs-light", color: "#fff" },
@@ -13,6 +13,7 @@ const MONACO_THEMES = [
   { name: "One Dark", value: "onedark", color: "#282c34" },
   { name: "Nord", value: "nord", color: "#2e3440" },
 ];
+
 import Editor from "@/components/Editor";
 import {
   getCurrentChallengeIndex,
@@ -27,8 +28,12 @@ import {
 } from "@/lib/challengeManager";
 
 export default function InfiniteChallengeCard() {
-  // Estado para mostrar/ocultar el selector de tema
+  const [showCriteria, setShowCriteria] = useState(true);
+  const [showExamples, setShowExamples] = useState(false);
+  const [showEditor, setShowEditor] = useState(true);
+  const [showDesc, setShowDesc] = useState(true);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [challenge, setChallenge] = useState(null);
   const [code, setCode] = useState("");
@@ -43,22 +48,7 @@ export default function InfiniteChallengeCard() {
     averageScore: 0,
     totalAttempts: 0,
   });
-  // Tema del editor, por defecto vs-dark
   const [editorTheme, setEditorTheme] = useState("vs-dark");
-
-  useEffect(() => {
-    // Cargar estado inicial
-    const index = getCurrentChallengeIndex();
-    const plan = getLearningPlan();
-
-    setCurrentIndex(index);
-    setLearningPlan(plan);
-    updateStats();
-
-    if (plan) {
-      loadChallenge(index);
-    }
-  }, []);
 
   const updateStats = () => {
     setStats({
@@ -69,50 +59,33 @@ export default function InfiniteChallengeCard() {
   };
 
   const loadChallenge = async (index) => {
-    if (index < 0) {
-      console.warn("Cannot load challenge with negative index");
-      return;
-    }
-
     setIsLoading(true);
-    setEvaluation(null);
-    setShowHints(false);
-
+    setIsCompleted(false);
     try {
-      // Primero intentar cargar desde historial
-      const historyEntry = getChallengeFromHistory(index);
-
-      if (historyEntry && historyEntry.challenge) {
-        console.log(
-          "Loading challenge from history:",
-          historyEntry.challenge.title
-        );
-        setChallenge(historyEntry.challenge);
-        setCode(historyEntry.code || "");
-        setEvaluation(historyEntry.evaluation || null);
-        setIsCompleted(!!historyEntry.completedAt);
+      setCurrentChallengeIndex(index);
+      setCurrentIndex(index);
+      const entry = getChallengeFromHistory(index);
+      if (entry && entry.challenge) {
+        setChallenge(entry.challenge);
+        setCode(entry.code || "");
+        setEvaluation(entry.evaluation || null);
+        setIsCompleted(entry.evaluation?.success || false);
       } else {
-        console.log("Generating new challenge for index:", index);
-        // Generar nuevo reto
         const newChallenge = await generateChallenge(index);
         setChallenge(newChallenge);
         setCode("");
         setEvaluation(null);
         setIsCompleted(false);
       }
-
-      setCurrentChallengeIndex(index);
-      setCurrentIndex(index);
+      updateStats();
     } catch (error) {
       console.error("Error loading challenge:", error);
-      // Mostrar reto de fallback
       const fallbackChallenge = {
-        id: `fallback-${index}`,
-        title: "Reto de Práctica",
-        description: `Practica los conceptos básicos del lenguaje ${
-          learningPlan?.language || "de programación"
-        }.`,
-        language: learningPlan?.language || "generic",
+        title: "Reto de ejemplo",
+        description: "Resuelve el problema propuesto.",
+        language: "javascript",
+        exampleInput: "",
+        exampleOutput: "",
         difficulty: "beginner",
         acceptanceCriteria: [
           "El código ejecuta sin errores",
@@ -167,12 +140,10 @@ export default function InfiniteChallengeCard() {
       const result = await response.json();
       setEvaluation(result);
 
-      // Si el reto fue exitoso, marcarlo como completado
       if (result.success) {
         setIsCompleted(true);
       }
 
-      // IMPORTANTE: Guardar en historial DESPUÉS de tener el resultado
       if (challenge && result) {
         saveChallengeToHistory(challenge, code, result);
         updateStats();
@@ -187,7 +158,6 @@ export default function InfiniteChallengeCard() {
       };
       setEvaluation(errorResult);
 
-      // Guardar también los errores en el historial
       if (challenge) {
         saveChallengeToHistory(challenge, code, errorResult);
         updateStats();
@@ -201,7 +171,6 @@ export default function InfiniteChallengeCard() {
     setCode("");
     setEvaluation(null);
     setShowHints(false);
-    // No cambiamos isCompleted para mantener el estado de completado
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -217,43 +186,31 @@ export default function InfiniteChallengeCard() {
     }
   };
 
+  useEffect(() => {
+    const plan = getLearningPlan();
+    setLearningPlan(plan);
+    if (plan) {
+      loadChallenge(0);
+    }
+  }, []);
+
   if (!learningPlan) {
     return (
       <div className="bg-card border border-border rounded-xl p-8 text-center">
-        <div
-          className={`w-16 h-16 ${
-            isCompleted ? "bg-green-100" : "bg-muted"
-          } rounded-full flex items-center justify-center mx-auto mb-4`}
-        >
-          {isCompleted ? (
-            <svg
-              className="w-8 h-8 text-green-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-8 h-8 text-muted-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-              />
-            </svg>
-          )}
+        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg
+            className="w-8 h-8 text-muted-foreground"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+            />
+          </svg>
         </div>
         <h3 className="text-lg font-semibold text-card-foreground mb-2">
           Sin Plan de Aprendizaje
@@ -273,522 +230,424 @@ export default function InfiniteChallengeCard() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header con estadísticas */}
-      <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border border-border rounded-xl p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+    <div className="h-screen w-screen overflow-hidden flex flex-col bg-background">
+      {/* Header Superior */}
+      <section className="flex-shrink-0 flex flex-col gap-2 px-6 py-2 border-b border-border bg-white/90 dark:bg-[#16161a]/90 shadow-sm">
+        {/* Primera fila: Título + Estadísticas */}
+        <div className="flex items-start justify-between gap-8">
+          <div className="flex-1">
+            <h1 className="text-2xl font-extrabold text-foreground mb-0.5">
               Retos Infinitos
-            </h2>
-            <p className="text-muted-foreground">
-              {learningPlan.goal} • {learningPlan.language}
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              {learningPlan?.goal} • {learningPlan?.language}
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-6 text-sm">
+          {/* Estadísticas */}
+          <div className="flex gap-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">
+              <div className="text-2xl font-black text-primary mb-0">
                 {stats.completed}
               </div>
-              <div className="text-muted-foreground">Completados</div>
+              <div className="text-[10px] text-muted-foreground font-semibold">
+                Completados
+              </div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-secondary">
+              <div className="text-2xl font-black text-yellow-500 mb-0">
                 {stats.averageScore}%
               </div>
-              <div className="text-muted-foreground">Promedio</div>
+              <div className="text-[10px] text-muted-foreground font-semibold">
+                Promedio
+              </div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-accent">
+              <div className="text-2xl font-black text-green-500 mb-0">
                 {stats.totalAttempts}
               </div>
-              <div className="text-muted-foreground">Intentos</div>
+              <div className="text-[10px] text-muted-foreground font-semibold">
+                Intentos
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Navegación */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={handlePrevious}
-          disabled={currentIndex === 0 || isLoading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          Anterior
-        </button>
-
-        <div className="text-center">
-          <div className="text-lg font-semibold text-foreground">
-            Reto #{currentIndex + 1}
-          </div>
-          {challenge && (
-            <div
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(
-                challenge.difficulty
-              )}`}
+        {/* Segunda fila: Navegación + Info del Reto */}
+        <div className="flex items-center justify-between gap-6 pt-1.5 border-t border-border">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrevious}
+              disabled={currentIndex === 0 || isLoading}
+              className="px-3 py-1.5 rounded-lg bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-105 flex items-center gap-1"
             >
-              {challenge.difficulty}
-              {isCompleted && (
-                <svg
-                  className="w-4 h-4 ml-1 text-green-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              )}
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={handleNext}
-          disabled={isLoading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          Siguiente
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
-      </div>
-
-      {/* Contenido del reto */}
-      {isLoading ? (
-        <div className="bg-card border border-border rounded-xl p-8 text-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Generando reto...</p>
-        </div>
-      ) : challenge ? (
-        <div className="bg-card border border-border rounded-xl p-6">
-          {/* Estado de completado */}
-          {isCompleted && (
-            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-100 p-3 rounded-lg mb-4">
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4"
                 fill="none"
-                viewBox="0 0 24 24"
                 stroke="currentColor"
+                viewBox="0 0 24 24"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M5 13l4 4L19 7"
+                  d="M15 19l-7-7 7-7"
                 />
               </svg>
-              <span>
-                ¡Reto completado! Puedes reintentarlo para practicar más.
-              </span>
-            </div>
-          )}
+              Anterior
+            </button>
 
-          {/* Título y descripción */}
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-card-foreground mb-3">
-              {challenge.title}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {challenge.description}
+            <div className="px-4 py-1 bg-muted rounded-lg">
+              <div className="text-base font-black text-foreground">
+                Reto #{currentIndex + 1}
+              </div>
+              {challenge && (
+                <div className="flex items-center gap-2 mt-0">
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${getDifficultyColor(
+                      challenge.difficulty
+                    )}`}
+                  >
+                    {challenge.difficulty}
+                  </span>
+                  {isCompleted && (
+                    <svg
+                      className="w-5 h-5 text-green-500"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                    </svg>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleNext}
+              disabled={isLoading}
+              className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-105 flex items-center gap-1"
+            >
+              Siguiente
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Indicador de Progreso */}
+          <div className="text-right">
+            <p className="text-[10px] text-muted-foreground mb-0.5">
+              {challenge?.estimatedTimeMinutes}
+              min estimado
             </p>
-
-            {/* Metadatos */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                ~{challenge.estimatedTimeMinutes} min
-              </span>
-              <span className="flex items-center gap-1">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                  />
-                </svg>
-                {challenge.language}
-              </span>
-            </div>
+            {challenge?.concepts && (
+              <div className="flex gap-1.5 flex-wrap justify-end">
+                {challenge.concepts.slice(0, 2).map((concept, i) => (
+                  <span
+                    key={i}
+                    className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded"
+                  >
+                    {concept}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
+        </div>
+      </section>
 
-          {/* Ejemplos de entrada/salida */}
-          {(challenge.exampleInput || challenge.exampleOutput) && (
-            <div className="mb-6 p-4 bg-muted/50 rounded-lg">
-              <h4 className="font-semibold text-card-foreground mb-2">
-                Ejemplo:
-              </h4>
-              {challenge.exampleInput && (
-                <div className="mb-2">
-                  <span className="text-sm font-medium">Entrada:</span>
-                  <code className="block mt-1 p-2 bg-background rounded text-sm font-mono">
-                    {challenge.exampleInput}
-                  </code>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-row gap-0 w-full overflow-hidden bg-background">
+        {challenge && (
+          <>
+          {!leftPanelCollapsed && (
+          <section className="w-[420px] h-full border-r border-border bg-white dark:bg-[#0f0f0f] flex flex-col">
+            {/* Header con botón de colapsar - Fijo */}
+            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 pb-3 border-b border-border">
+              <div>
+                <h2 className="text-base font-bold text-foreground">{challenge.title}</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="px-2 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">
+                    {challenge.difficulty}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{challenge.estimatedTimeMinutes} min</span>
                 </div>
-              )}
-              {challenge.exampleOutput && (
-                <div>
-                  <span className="text-sm font-medium">Salida:</span>
-                  <code className="block mt-1 p-2 bg-background rounded text-sm font-mono">
-                    {challenge.exampleOutput}
-                  </code>
-                </div>
-              )}
+              </div>
+              <button
+                onClick={() => setLeftPanelCollapsed(true)}
+                className="p-1.5 hover:bg-muted rounded transition"
+                title="Expandir editor"
+              >
+                ◀
+              </button>
             </div>
+
+            {/* Contenedor con scroll para las secciones */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 scrollbar-thin">
+              <div className="flex flex-col gap-3">
+                {/* Description Panel */}
+                <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
+              <button
+                onClick={() => setShowDesc((v) => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
+              >
+                <span className="flex items-center gap-2">
+                  📝 Descripción del reto
+                </span>
+                <span className="transition-transform duration-300">{showDesc ? '▼' : '▶'}</span>
+              </button>
+              {showDesc && (
+                <div className="px-3 py-3 border-t border-border animate-fade-in">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {challenge.description}
+                  </p>
+                </div>
+              )}
+            </section>
+
+              {/* Criteria Panel */}
+              <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
+              <button
+                onClick={() => setShowCriteria((v) => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
+              >
+                <span className="flex items-center gap-2">
+                  ✓ Criterios de aceptación
+                </span>
+                <span className="transition-transform duration-300">{showCriteria ? '▼' : '▶'}</span>
+              </button>
+              {showCriteria && (
+                <div className="px-3 py-3 border-t border-border animate-fade-in">
+                  <ul className="space-y-2">
+                    {challenge.acceptanceCriteria?.map((criteria, i) => (
+                      <li
+                        key={i}
+                        className="text-sm text-muted-foreground flex gap-2 items-start"
+                      >
+                        <span className="text-primary mt-0.5">✓</span>
+                        <span>{criteria}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
+
+            {/* Examples Panel */}
+            {(challenge.exampleInput || challenge.exampleOutput) && (
+              <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
+                <button
+                  onClick={() => setShowExamples((v) => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
+                >
+                  <span className="flex items-center gap-2">
+                    📋 Ejemplos
+                  </span>
+                  <span className="transition-transform duration-300">{showExamples ? '▼' : '▶'}</span>
+                </button>
+                {showExamples && (
+                  <div className="px-3 py-3 border-t border-border space-y-3 animate-fade-in">
+                    {challenge.exampleInput && (
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                          Entrada:
+                        </label>
+                        <code className="block p-2 bg-muted rounded text-xs font-mono text-primary overflow-x-auto">
+                          {challenge.exampleInput}
+                        </code>
+                      </div>
+                    )}
+                    {challenge.exampleOutput && (
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                          Salida esperada:
+                        </label>
+                        <code className="block p-2 bg-muted rounded text-xs font-mono text-green-600 dark:text-green-400 overflow-x-auto">
+                          {challenge.exampleOutput}
+                        </code>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Hints Panel */}
+            {challenge.hints && challenge.hints.length > 0 && (
+              <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a] transition-all duration-300">
+                <button
+                  onClick={() => setShowHints((v) => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
+                >
+                  <span className="flex items-center gap-2">
+                    💡 Pistas
+                  </span>
+                  <span className="transition-transform duration-300">{showHints ? '▼' : '▶'}</span>
+                </button>
+                {showHints && (
+                  <div className="px-3 py-3 border-t border-border animate-fade-in">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                      <ul className="space-y-2">
+                        {challenge.hints.map((hint, i) => (
+                          <li key={i} className="text-sm text-yellow-900 dark:text-yellow-200 flex gap-2 items-start">
+                            <span className="text-yellow-600">💡</span>
+                            <span>{hint}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+              </div>
+            </div>
+          </section>
           )}
 
-          {/* Criterios de aceptación */}
-          <div className="mb-6">
-            <h4 className="font-semibold text-card-foreground mb-2">
-              Criterios de aceptación:
-            </h4>
-            <ul className="list-disc list-inside text-muted-foreground space-y-1">
-              {challenge.acceptanceCriteria.map((criteria, i) => (
-                <li key={i}>{criteria}</li>
-              ))}
-            </ul>
-          </div>
+          {/* Botón para expandir panel izquierdo cuando está colapsado */}
+          {leftPanelCollapsed && (
+            <button
+              onClick={() => setLeftPanelCollapsed(false)}
+              className="w-8 flex-shrink-0 bg-white dark:bg-[#1a1a1a] border-r border-border hover:bg-muted transition flex items-center justify-center"
+              title="Mostrar descripción"
+            >
+              ▶
+            </button>
+          )}
+          </>
+        )}
 
-          {/* Área de código */}
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-semibold text-card-foreground">
-                    Tu solución en {challenge.language}:
-                  </label>
-                  {/* Icono de configuración para mostrar el selector de tema */}
+        {/* Right Panel - Editor */}
+        {challenge && (
+          <section className="flex-1 h-full overflow-hidden flex flex-col bg-[#1e1e1e]">
+            {/* Editor Header */}
+            <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 bg-[#2d2d2d] border-b border-[#3e3e3e]">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400 font-semibold">{challenge.language}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Theme Selector */}
+                <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowThemeSelector((v) => !v)}
-                    className="ml-2 p-1 rounded hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    aria-label="Configurar tema de color"
+                    className="px-2 py-1 text-xs rounded hover:bg-[#3e3e3e] text-gray-300 flex items-center gap-1"
+                    aria-label="Configurar tema"
                   >
-                    <img
-                      src="/settings.svg"
-                      alt="Configuración"
-                      width="20"
-                      height="20"
-                    />
+                    🎨 Tema
                   </button>
+                  {showThemeSelector && (
+                    <div className="absolute right-0 top-full mt-1 bg-[#2d2d2d] border border-[#3e3e3e] rounded shadow-lg z-50 p-2 min-w-[150px]">
+                      <div className="flex flex-col gap-1">
+                        {MONACO_THEMES.map((theme) => (
+                          <button
+                            key={theme.value}
+                            onClick={() => {
+                              setEditorTheme(theme.value);
+                              setShowThemeSelector(false);
+                            }}
+                            className={`px-2 py-1 text-xs rounded text-left hover:bg-[#3e3e3e] transition ${
+                              editorTheme === theme.value
+                                ? "bg-primary text-primary-foreground"
+                                : "text-gray-300"
+                            }`}
+                          >
+                            {theme.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {challenge.hints && challenge.hints.length > 0 && (
-                  <button
-                    onClick={() => setShowHints(!showHints)}
-                    className="text-sm text-primary hover:text-primary/80 font-medium"
-                  >
-                    {showHints ? "Ocultar" : "Ver"} pistas
-                  </button>
-                )}
               </div>
+            </div>
 
-              {/* Selector de tema de color, solo visible si showThemeSelector */}
-              {showThemeSelector && (
-                <div className="mb-3">
-                  <label className="block text-xs font-semibold mb-1 text-muted-foreground">
-                    Extensiones de color:
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {MONACO_THEMES.map((theme) => (
-                      <button
-                        key={theme.value}
-                        type="button"
-                        onClick={() => setEditorTheme(theme.value)}
-                        className={`flex items-center gap-2 px-3 py-1 rounded border text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-                          editorTheme === theme.value
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-background border-border text-foreground hover:bg-muted"
-                        }`}
-                        style={{
-                          backgroundColor:
-                            editorTheme === theme.value
-                              ? theme.color
-                              : undefined,
-                        }}
-                        aria-label={`Tema ${theme.name}`}
-                      >
-                        <span
-                          className="inline-block w-4 h-4 rounded-full border mr-1"
-                          style={{
-                            backgroundColor: theme.color,
-                            borderColor: "#ccc",
-                          }}
-                        ></span>
-                        {theme.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* Monaco Editor */}
+            <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
               <Editor
                 language={challenge.language?.toLowerCase() || "javascript"}
                 value={code}
                 onChange={setCode}
-                height="200px"
+                height="100%"
                 theme={editorTheme}
               />
             </div>
 
-            {/* Pistas */}
-            {showHints && challenge.hints && challenge.hints.length > 0 && (
-              <div className="p-4 bg-accent/10 border border-accent/20 rounded-lg">
-                <h4 className="font-semibold text-accent mb-2 flex items-center gap-2">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                    />
-                  </svg>
-                  Pistas
-                </h4>
-                <ul className="space-y-1 text-sm text-accent-foreground">
-                  {challenge.hints.map((hint, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-accent mt-0.5">•</span>
-                      {hint}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Botones de acción */}
-            <div className="flex gap-3">
+            {/* Action Buttons */}
+            <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-[#2d2d2d] border-t border-[#3e3e3e]">
               <button
                 onClick={handleSubmitCode}
                 disabled={!code.trim() || isEvaluating}
-                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed flex items-center gap-2 font-medium transition-colors"
+                className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
-                {isEvaluating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                    Evaluando...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                      />
-                    </svg>
-                    Evaluar Código
-                  </>
-                )}
+                {isEvaluating ? "Evaluando..." : "Ejecutar"}
               </button>
-
               {(evaluation || code) && (
                 <button
                   onClick={retryChallenge}
-                  className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors flex items-center gap-2"
+                  className="px-4 py-1.5 rounded bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 transition"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
                   Reintentar
                 </button>
               )}
             </div>
 
-            {/* Resultado de la evaluación */}
+            {/* Evaluation Feedback - Expandido y visible */}
             {evaluation && (
-              <div
-                className={`p-6 rounded-lg border-l-4 ${
-                  evaluation.success
-                    ? "bg-green-50 border-green-500 dark:bg-green-950/20 dark:border-green-400"
-                    : "bg-red-50 border-red-500 dark:bg-red-950/20 dark:border-red-400"
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      evaluation.success
-                        ? "bg-green-500 text-white"
-                        : "bg-red-500 text-white"
-                    }`}
-                  >
-                    {evaluation.success ? (
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    )}
+              <div className="flex-shrink-0 max-h-[40vh] overflow-y-auto bg-[#1e1e1e] border-t border-[#3e3e3e] p-4 scrollbar-thin">
+                <div
+                  className={`rounded-lg border-l-4 p-4 ${
+                    evaluation.success
+                      ? "bg-green-900/20 border-green-500"
+                      : "bg-red-900/20 border-red-500"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className={`text-lg font-bold ${
+                      evaluation.success ? "text-green-400" : "text-red-400"
+                    }`}>
+                      {evaluation.success ? "✓ Código Aprobado" : "✗ Código Rechazado"}
+                    </h3>
+                    <span className={`text-2xl font-bold ${
+                      evaluation.success ? "text-green-400" : "text-red-400"
+                    }`}>
+                      {evaluation.score}%
+                    </span>
                   </div>
+                  
+                  <p className="text-sm text-gray-300 mb-3">{evaluation.feedback}</p>
 
-                  <div className="flex-1">
-                    <h4
-                      className={`font-bold text-lg ${
-                        evaluation.success
-                          ? "text-green-800 dark:text-green-200"
-                          : "text-red-800 dark:text-red-200"
-                      }`}
-                    >
-                      {evaluation.success
-                        ? "¡Excelente trabajo!"
-                        : "Necesita mejoras"}
-                    </h4>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span
-                        className={`text-sm ${
-                          evaluation.success
-                            ? "text-green-600 dark:text-green-300"
-                            : "text-red-600 dark:text-red-300"
-                        }`}
-                      >
-                        Puntuación: {evaluation.score}%
-                      </span>
+                  {evaluation.suggestions && evaluation.suggestions.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-700">
+                      <h4 className="text-sm font-semibold text-gray-300 mb-2">💡 Sugerencias:</h4>
+                      <ul className="space-y-1">
+                        {evaluation.suggestions.map((suggestion, i) => (
+                          <li key={i} className="text-sm text-gray-400 flex gap-2 items-start">
+                            <span className="text-blue-400">•</span>
+                            <span>{suggestion}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <h5
-                      className={`font-medium mb-2 ${
-                        evaluation.success
-                          ? "text-green-700 dark:text-green-300"
-                          : "text-red-700 dark:text-red-300"
-                      }`}
-                    >
-                      Feedback
-                    </h5>
-                    <p
-                      className={`text-sm ${
-                        evaluation.success
-                          ? "text-green-600 dark:text-green-300"
-                          : "text-red-600 dark:text-red-300"
-                      }`}
-                    >
-                      {evaluation.feedback}
-                    </p>
-                  </div>
-
-                  {evaluation.suggestions &&
-                    evaluation.suggestions.length > 0 && (
-                      <div>
-                        <h5
-                          className={`font-medium mb-2 ${
-                            evaluation.success
-                              ? "text-green-700 dark:text-green-300"
-                              : "text-red-700 dark:text-red-300"
-                          }`}
-                        >
-                          Sugerencias
-                        </h5>
-                        <ul
-                          className={`list-disc list-inside text-sm space-y-1 ${
-                            evaluation.success
-                              ? "text-green-600 dark:text-green-300"
-                              : "text-red-600 dark:text-red-300"
-                          }`}
-                        >
-                          {evaluation.suggestions.map((suggestion, i) => (
-                            <li key={i}>{suggestion}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                  )}
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      ) : null}
+          </section>
+        )}
+      </div>
     </div>
   );
 }
