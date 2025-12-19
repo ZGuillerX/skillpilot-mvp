@@ -1,4 +1,6 @@
 // Gestión de estado de retos en localStorage
+import { saveCompletedChallengeToDB } from './userProgress';
+
 export function getChallengeHistory() {
   if (typeof window === "undefined") return [];
   try {
@@ -111,6 +113,11 @@ export function saveChallengeToHistory(
       `Challenge saved to history at index ${currentIndex}:`,
       challengeEntry.challenge.title
     );
+
+    // Guardar en BD si el usuario está autenticado
+    saveCompletedChallengeToDB(challengeEntry).catch(err => {
+      console.warn('Could not sync to database:', err);
+    });
   } catch (error) {
     console.error("Error saving challenge to history:", error);
   }
@@ -255,10 +262,19 @@ export function getAverageScore() {
 }
 
 // Configuración del plan de aprendizaje para retos
-export function saveLearningPlan(plan) {
+import { saveLearningPlanToDB, checkPlanLimit } from './userProgress';
+
+export async function saveLearningPlan(plan) {
   if (typeof window === "undefined") return;
 
   try {
+    // Verificar límite de planes
+    const limitCheck = await checkPlanLimit();
+    
+    if (!limitCheck.hasSpace) {
+      throw new Error(`Has alcanzado el límite de ${limitCheck.maxPlans} planes de aprendizaje. Por favor, elimina alguno antes de crear uno nuevo.`);
+    }
+
     const planData = {
       goal: plan.goal,
       level: plan.level,
@@ -266,9 +282,26 @@ export function saveLearningPlan(plan) {
       savedAt: new Date().toISOString(),
     };
 
+    // Guardar en localStorage
     localStorage.setItem("learningPlan", JSON.stringify(planData));
+
+    // Limpiar historial de retos cuando se crea un nuevo plan
+    localStorage.removeItem("challengeHistory");
+    localStorage.setItem("currentChallengeIndex", "0");
+
+    // Guardar en BD si está autenticado
+    try {
+      await saveLearningPlanToDB(planData);
+      console.log('✅ Plan guardado en BD');
+    } catch (error) {
+      if (error.message.includes('límite')) {
+        throw error; // Re-lanzar error de límite
+      }
+      console.warn('⚠️ Plan guardado solo localmente:', error.message);
+    }
   } catch (error) {
     console.error("Error saving learning plan:", error);
+    throw error;
   }
 }
 

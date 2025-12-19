@@ -5,7 +5,7 @@ export async function middleware(request) {
     const token = request.cookies.get('token')?.value;
 
     // Rutas que requieren autenticación
-    const protectedRoutes = ['/challenges', '/onboarding'];
+    const protectedRoutes = ['/challenges', '/onboarding', '/profile', '/history'];
 
     // Rutas de autenticación (si ya estás logueado, redirigir a home)
     const authRoutes = ['/login', '/register'];
@@ -55,6 +55,8 @@ export const config = {
     matcher: [
         '/challenges/:path*',
         '/onboarding/:path*',
+        '/profile/:path*',
+        '/history/:path*',
         '/login',
         '/register'
     ]
