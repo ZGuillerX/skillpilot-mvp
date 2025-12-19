@@ -148,7 +148,7 @@ ${
                   evaluation.success ? "text-green-600" : "text-red-600"
                 }`}
               >
-                {evaluation.success ? "✅" : ""}
+                {evaluation.success ? "" : ""}
               </span>
               <h4
                 className={`font-semibold ${

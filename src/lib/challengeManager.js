@@ -1,5 +1,6 @@
 // Gestión de estado de retos desde BD
 import { saveCompletedChallengeToDB, getUserProgress, saveLearningPlanToDB, checkPlanLimit } from './userProgress';
+import challengeCache from './challengeCache';
 
 // Obtener historial de retos desde BD
 export async function getChallengeHistory() {
@@ -105,7 +106,7 @@ export async function saveChallengeToHistory(
 
     // Guardar directamente en BD
     const result = await saveCompletedChallengeToDB(challengeEntry);
-    console.log('✅ Challenge saved result:', result);
+    console.log(' Challenge saved result:', result);
   } catch (error) {
     console.error("Error saving challenge to history:", error);
   }
@@ -325,7 +326,7 @@ export async function saveLearningPlan(plan) {
     // Guardar en BD y obtener el planId
     const result = await saveLearningPlanToDB(planData);
 
-    console.log('✅ Plan guardado en BD con ID:', result.plan.id);
+    console.log(' Plan guardado en BD con ID:', result.plan.id);
 
     // Resetear índice de retos en memoria
     currentChallengeIndexCache = 0;
@@ -362,6 +363,12 @@ export async function generateChallenge(challengeIndex = 0) {
 
   if (!plan) {
     throw new Error("No hay plan de aprendizaje configurado");
+  }
+
+  // Intentar obtener del caché primero
+  const cached = challengeCache.get(plan.id, challengeIndex);
+  if (cached) {
+    return cached;
   }
 
   const history = await getChallengeHistory();
@@ -416,6 +423,9 @@ export async function generateChallenge(challengeIndex = 0) {
     if (!data.challenge) {
       throw new Error("Respuesta inválida del servidor");
     }
+
+    // Guardar en caché antes de retornar
+    challengeCache.set(plan.id, challengeIndex, data.challenge);
 
     return data.challenge;
   } catch (error) {

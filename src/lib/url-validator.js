@@ -108,7 +108,7 @@ export async function validateAndFixResource(resource) {
   const isValid = await validateUrl(resource.url);
 
   if (isValid) {
-    console.log(`[v0] ✅ URL is valid: ${resource.url}`);
+    console.log(`[v0]  URL is valid: ${resource.url}`);
     return resource;
   }
 
@@ -151,7 +151,7 @@ export async function validateAllPlanResources(plan) {
   }
 
   console.log(
-    `[v0] ✅ Validation complete: ${validatedModules.length}/${plan.modules.length} modules kept`
+    `[v0]  Validation complete: ${validatedModules.length}/${plan.modules.length} modules kept`
   );
 
   return {

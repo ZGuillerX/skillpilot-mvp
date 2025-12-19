@@ -70,7 +70,7 @@ export async function POST(request) {
             history.push(challengeData);
         }
 
-        console.log('✅ Challenge saved:', challengeData.challenge.title, 'planId:', challengeData.planId, 'total history:', history.length);
+        console.log(' Challenge saved:', challengeData.challenge.title, 'planId:', challengeData.planId, 'total history:', history.length);
 
         // Actualizar estadísticas
         stats.totalChallenges = history.length;

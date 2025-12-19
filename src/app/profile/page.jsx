@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getUserProgress,
@@ -46,9 +47,9 @@ export default function ProfilePage() {
     try {
       await clearAllPlans();
       await loadProgress();
-      alert("Todos los planes han sido eliminados exitosamente");
+      toast.success("Todos los planes han sido eliminados exitosamente");
     } catch (error) {
-      alert("Error al eliminar los planes: " + error.message);
+      toast.error("Error al eliminar los planes: " + error.message);
     } finally {
       setClearing(false);
     }
@@ -59,10 +60,12 @@ export default function ProfilePage() {
     try {
       await switchPlan(planId);
       await loadProgress();
-      alert("Plan cambiado exitosamente. Ve a Retos Infinitos para continuar.");
+      toast.success(
+        "Plan cambiado exitosamente. Ve a Retos Infinitos para continuar."
+      );
       router.push("/challenges");
     } catch (error) {
-      alert("Error al cambiar de plan: " + error.message);
+      toast.error("Error al cambiar de plan: " + error.message);
     } finally {
       setSwitching(null);
     }
@@ -81,9 +84,9 @@ export default function ProfilePage() {
     try {
       await deleteLearningPlan(planId);
       await loadProgress();
-      alert("Plan eliminado exitosamente");
+      toast.success("Plan eliminado exitosamente");
     } catch (error) {
-      alert("Error al eliminar el plan: " + error.message);
+      toast.error("Error al eliminar el plan: " + error.message);
     } finally {
       setDeleting(null);
     }
@@ -132,16 +135,39 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="bg-card border border-border rounded-xl p-8">
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-3xl font-bold">
-              {user?.name?.charAt(0).toUpperCase()}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-3xl font-bold">
+                {user?.name?.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">
+                  {user?.name}
+                </h1>
+                <p className="text-muted-foreground">{user?.email}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                {user?.name}
-              </h1>
-              <p className="text-muted-foreground">{user?.email}</p>
-            </div>
+
+            {/* Botón de Estadísticas y Logros */}
+            <a
+              href="/stats"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+              Ver Estadísticas y Logros
+            </a>
           </div>
         </div>
 
