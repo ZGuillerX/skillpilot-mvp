@@ -141,12 +141,12 @@ export async function validateAllPlanResources(plan) {
         });
       } else {
         console.log(
-          `[v0] ⚠️ Skipping module with invalid resource: ${module.title}`
+          `[v0] Skipping module with invalid resource: ${module.title}`
         );
         // Skip modules with invalid resources instead of using fallbacks
       }
     } else {
-      console.log(`[v0] ⚠️ Skipping module without resource: ${module.title}`);
+      console.log(`[v0] Skipping module without resource: ${module.title}`);
     }
   }
 

@@ -68,6 +68,86 @@ IMPORTANTE:
 - Las pistas deben guiar sin dar la respuesta completa
 `;
 
+// Función para generar retos de respaldo cuando falla la IA
+function generateFallbackChallenge(index, language, difficulty, goal) {
+  const challenges = {
+    JavaScript: [
+      {
+        title: "Función Suma Simple",
+        description: "Crea una función que tome dos números como parámetros y devuelva su suma.",
+        concepts: ["funciones", "parámetros", "return"],
+        exampleInput: "suma(5, 3)",
+        exampleOutput: "8",
+      },
+      {
+        title: "Filtrar Array",
+        description: "Crea una función que filtre un array de números y devuelva solo los números pares.",
+        concepts: ["arrays", "filter", "funciones arrow"],
+        exampleInput: "[1, 2, 3, 4, 5, 6]",
+        exampleOutput: "[2, 4, 6]",
+      },
+    ],
+    Python: [
+      {
+        title: "Función de Saludo",
+        description: "Crea una función que tome un nombre como parámetro y devuelva un saludo personalizado.",
+        concepts: ["funciones", "strings", "f-strings"],
+        exampleInput: "saludar('Ana')",
+        exampleOutput: "'Hola Ana, ¡bienvenida!'",
+      },
+      {
+        title: "Contador de Palabras",
+        description: "Crea una función que cuente la frecuencia de cada palabra en un texto.",
+        concepts: ["diccionarios", "split", "loops"],
+        exampleInput: "'el gato subió al tejado'",
+        exampleOutput: "{'el': 1, 'gato': 1, 'subió': 1, 'al': 1, 'tejado': 1}",
+      },
+    ],
+    django: [
+      {
+        title: "Modelo Django Simple",
+        description: "Crea un modelo Django para representar un artículo de blog con título, contenido y fecha de publicación.",
+        concepts: ["modelos", "campos", "DateTimeField"],
+        exampleInput: "class Article(models.Model):",
+        exampleOutput: "Modelo con campos title, content, published_date",
+      },
+      {
+        title: "Vista Django Básica",
+        description: "Crea una vista basada en función que liste todos los artículos del blog.",
+        concepts: ["vistas", "QuerySet", "render"],
+        exampleInput: "def article_list(request):",
+        exampleOutput: "Vista que renderiza lista de artículos",
+      },
+    ],
+  };
+
+  const langChallenges = challenges[language] || challenges.JavaScript;
+  const challengeIndex = index % langChallenges.length;
+  const template = langChallenges[challengeIndex];
+
+  return {
+    id: `fallback-${index}-${Date.now()}`,
+    title: template.title,
+    description: template.description,
+    language: language,
+    difficulty: difficulty,
+    acceptanceCriteria: [
+      "El código ejecuta sin errores",
+      "Cumple con los requisitos especificados",
+      "Código limpio y bien comentado",
+    ],
+    hints: [
+      "Lee cuidadosamente la descripción del problema",
+      "Prueba tu código con los ejemplos dados",
+      "Considera casos edge como entradas vacías",
+    ],
+    exampleInput: template.exampleInput,
+    exampleOutput: template.exampleOutput,
+    concepts: template.concepts,
+    estimatedTimeMinutes: 30,
+  };
+}
+
 export async function POST(req) {
   try {
     const {
@@ -137,26 +217,39 @@ export async function POST(req) {
       `,
     };
 
-    // Intentar con el modelo más potente disponible, con fallback
+    // Intentar con el modelo más potente disponible, con múltiples fallbacks
     let result;
     try {
       result = await askJSON({
         system: SYSTEM_CHALLENGES,
         user: userPrompt,
-        model: "llama-3.3-70b-versatile", // Modelo más nuevo y potente
+        model: "llama-3.3-70b-versatile",
       });
     } catch (error) {
       console.log("Primary model failed, trying fallback...");
-      // Fallback al modelo más confiable
-      result = await askJSON({
-        system: SYSTEM_CHALLENGES,
-        user: userPrompt,
-        model: "llama-3.1-8b-instant",
-      });
+      
+      // Si es error de rate limit, usar reto de ejemplo directamente
+      if (error.message?.includes('429') || error.message?.includes('rate_limit')) {
+        console.log('Rate limit reached, using fallback challenge');
+        result = { challenge: generateFallbackChallenge(currentChallenge, language, targetDifficulty, goal) };
+      } else {
+        try {
+          // Intentar con modelo alternativo
+          result = await askJSON({
+            system: SYSTEM_CHALLENGES,
+            user: userPrompt,
+            model: "llama-3.1-8b-instant",
+          });
+        } catch (fallbackError) {
+          console.log('All models failed, using fallback challenge');
+          result = { challenge: generateFallbackChallenge(currentChallenge, language, targetDifficulty, goal) };
+        }
+      }
     }
 
     if (!result.challenge) {
-      throw new Error("No se pudo generar el reto");
+      console.log('No challenge generated, using fallback');
+      result = { challenge: generateFallbackChallenge(currentChallenge, language, targetDifficulty, goal) };
     }
 
     // Validar que el reto tenga la estructura correcta

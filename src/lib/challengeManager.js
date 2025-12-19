@@ -1,12 +1,18 @@
-// Gestión de estado de retos en localStorage
-import { saveCompletedChallengeToDB } from './userProgress';
+// Gestión de estado de retos desde BD
+import { saveCompletedChallengeToDB, getUserProgress, saveLearningPlanToDB, checkPlanLimit } from './userProgress';
 
-export function getChallengeHistory() {
+// Obtener historial de retos desde BD
+export async function getChallengeHistory() {
   if (typeof window === "undefined") return [];
   try {
-    const history = JSON.parse(
-      localStorage.getItem("challengeHistory") || "[]"
-    );
+    const progress = await getUserProgress();
+    if (!progress || !progress.challenge_history) {
+      console.log('⚠️ No challenge history found in progress');
+      return [];
+    }
+
+    const history = progress.challenge_history;
+    console.log('📚 Challenge history loaded:', history.length, 'challenges');
 
     // Validar que cada entrada tenga la estructura correcta
     const validHistory = history.filter((entry) => {
@@ -20,39 +26,29 @@ export function getChallengeHistory() {
       );
     });
 
-    // Si hay entradas inválidas, guardar solo las válidas
     if (validHistory.length !== history.length) {
-      console.log(
-        `Cleaned ${
-          history.length - validHistory.length
-        } invalid entries from history`
-      );
-      localStorage.setItem("challengeHistory", JSON.stringify(validHistory));
+      console.warn(`⚠️ Filtered out ${history.length - validHistory.length} invalid entries`);
     }
 
     return validHistory;
   } catch (error) {
-    console.error("Error reading challenge history, resetting:", error);
-    localStorage.removeItem("challengeHistory");
+    console.error("Error reading challenge history from DB:", error);
     return [];
   }
 }
 
+// Índice del reto actual - mantener en memoria durante la sesión
+let currentChallengeIndexCache = 0;
+
 export function getCurrentChallengeIndex() {
-  if (typeof window === "undefined") return 0;
-  try {
-    return parseInt(localStorage.getItem("currentChallengeIndex") || "0");
-  } catch {
-    return 0;
-  }
+  return currentChallengeIndexCache;
 }
 
 export function setCurrentChallengeIndex(index) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("currentChallengeIndex", index.toString());
+  currentChallengeIndexCache = index;
 }
 
-export function saveChallengeToHistory(
+export async function saveChallengeToHistory(
   challenge,
   code = "",
   evaluation = null
@@ -69,8 +65,12 @@ export function saveChallengeToHistory(
   }
 
   try {
-    const history = getChallengeHistory();
-    const currentIndex = getCurrentChallengeIndex();
+    const learningPlan = await getLearningPlan();
+
+    if (!learningPlan || !learningPlan.id) {
+      console.error('❌ No learning plan found or no id');
+      return;
+    }
 
     const challengeEntry = {
       challenge: {
@@ -91,77 +91,87 @@ export function saveChallengeToHistory(
       completedAt: evaluation?.success ? new Date().toISOString() : null,
       attempts: 1,
       savedAt: new Date().toISOString(),
+      planId: learningPlan.id, // Asociar reto con plan usando 'id'
     };
 
-    // Si ya existe este índice, actualizar; si no, agregar
-    if (history[currentIndex]) {
-      challengeEntry.attempts = (history[currentIndex].attempts || 0) + 1;
-      history[currentIndex] = {
-        ...history[currentIndex],
-        ...challengeEntry,
-      };
-    } else {
-      // Llenar huecos si es necesario
-      while (history.length < currentIndex) {
-        history.push(null);
-      }
-      history[currentIndex] = challengeEntry;
-    }
-
-    localStorage.setItem("challengeHistory", JSON.stringify(history));
     console.log(
-      `Challenge saved to history at index ${currentIndex}:`,
-      challengeEntry.challenge.title
+      `💾 Saving challenge to DB:`,
+      challengeEntry.challenge.title,
+      "for plan:",
+      challengeEntry.planId,
+      "success:",
+      evaluation?.success
     );
 
-    // Guardar en BD si el usuario está autenticado
-    saveCompletedChallengeToDB(challengeEntry).catch(err => {
-      console.warn('Could not sync to database:', err);
-    });
+    // Guardar directamente en BD
+    const result = await saveCompletedChallengeToDB(challengeEntry);
+    console.log('✅ Challenge saved result:', result);
   } catch (error) {
     console.error("Error saving challenge to history:", error);
   }
 }
 
-export function getChallengeFromHistory(index) {
+export async function getChallengeFromHistory(index) {
   if (typeof window === "undefined") return null;
 
   try {
-    const history = getChallengeHistory();
-    return history[index] || null;
+    const history = await getChallengeHistory();
+    const learningPlan = await getLearningPlan();
+
+    // Filtrar retos del plan actual
+    const planChallenges = learningPlan?.id
+      ? history.filter(entry => entry.planId === learningPlan.id)
+      : history;
+
+    return planChallenges[index] || null;
   } catch {
     return null;
   }
 }
 
-export function getCompletedChallengesCount() {
+export async function getCompletedChallengesCount() {
   if (typeof window === "undefined") return 0;
 
   try {
-    const history = getChallengeHistory();
-    return history.filter((entry) => entry.evaluation?.success).length;
-  } catch {
+    const history = await getChallengeHistory();
+    const learningPlan = await getLearningPlan();
+
+    console.log('📊 getCompletedChallengesCount - Total history:', history.length, 'Current plan:', learningPlan?.id);
+
+    // Contar solo retos del plan actual
+    const planChallenges = learningPlan?.id
+      ? history.filter(entry => entry.planId === learningPlan.id)
+      : history;
+
+    console.log('📊 Plan challenges:', planChallenges.length);
+
+    const completed = planChallenges.filter((entry) => entry.evaluation?.success).length;
+    console.log('📊 Completed:', completed);
+
+    return completed;
+  } catch (error) {
+    console.error('Error in getCompletedChallengesCount:', error);
     return 0;
   }
 }
 
 // Funciones para manejar retos completados específicamente
-export function isChallengeCompleted(challengeIndex) {
+export async function isChallengeCompleted(challengeIndex) {
   if (typeof window === "undefined") return false;
 
   try {
-    const entry = getChallengeFromHistory(challengeIndex);
+    const entry = await getChallengeFromHistory(challengeIndex);
     return entry && entry.evaluation && entry.evaluation.success === true;
   } catch {
     return false;
   }
 }
 
-export function getChallengeCompletionStatus(challengeIndex) {
+export async function getChallengeCompletionStatus(challengeIndex) {
   if (typeof window === "undefined") return null;
 
   try {
-    const entry = getChallengeFromHistory(challengeIndex);
+    const entry = await getChallengeFromHistory(challengeIndex);
     if (!entry || !entry.evaluation) return null;
 
     return {
@@ -177,21 +187,28 @@ export function getChallengeCompletionStatus(challengeIndex) {
 }
 
 // Función para obtener estadísticas de progreso
-export function getProgressStats() {
+export async function getProgressStats() {
   if (typeof window === "undefined")
     return { completed: 0, total: 0, streak: 0 };
 
   try {
-    const history = getChallengeHistory();
-    const completed = history.filter(
+    const history = await getChallengeHistory();
+    const learningPlan = await getLearningPlan();
+
+    // Filtrar retos del plan actual
+    const planChallenges = learningPlan?.id
+      ? history.filter(entry => entry.planId === learningPlan.id)
+      : history;
+
+    const completed = planChallenges.filter(
       (entry) => entry?.evaluation?.success
     ).length;
-    const total = history.length;
+    const total = planChallenges.length;
 
     // Calcular racha actual (retos completados consecutivos desde el final)
     let streak = 0;
-    for (let i = history.length - 1; i >= 0; i--) {
-      if (history[i]?.evaluation?.success) {
+    for (let i = planChallenges.length - 1; i >= 0; i--) {
+      if (planChallenges[i]?.evaluation?.success) {
         streak++;
       } else {
         break;
@@ -205,11 +222,11 @@ export function getProgressStats() {
 }
 
 // Función para marcar un reto como completado (para casos especiales)
-export function markChallengeCompleted(challengeIndex, score = 100) {
+export async function markChallengeCompleted(challengeIndex, score = 100) {
   if (typeof window === "undefined") return;
 
   try {
-    const entry = getChallengeFromHistory(challengeIndex);
+    const entry = await getChallengeFromHistory(challengeIndex);
     if (entry && entry.challenge) {
       const completedEvaluation = {
         success: true,
@@ -218,7 +235,7 @@ export function markChallengeCompleted(challengeIndex, score = 100) {
         suggestions: [],
       };
 
-      saveChallengeToHistory(
+      await saveChallengeToHistory(
         entry.challenge,
         entry.code || "",
         completedEvaluation
@@ -229,40 +246,63 @@ export function markChallengeCompleted(challengeIndex, score = 100) {
   }
 }
 
-export function getTotalAttempts() {
+export async function getTotalAttempts() {
   if (typeof window === "undefined") return 0;
 
   try {
-    const history = getChallengeHistory();
-    return history.reduce((total, entry) => total + (entry.attempts || 0), 0);
-  } catch {
+    const history = await getChallengeHistory();
+    const learningPlan = await getLearningPlan();
+
+    console.log('📊 getTotalAttempts - Current plan:', learningPlan?.id);
+
+    // Contar solo retos del plan actual
+    const planChallenges = learningPlan?.id
+      ? history.filter(entry => entry.planId === learningPlan.id)
+      : history;
+
+    const total = planChallenges.reduce((total, entry) => total + (entry.attempts || 0), 0);
+    console.log('📊 Total attempts:', total);
+    return total;
+  } catch (error) {
+    console.error('Error in getTotalAttempts:', error);
     return 0;
   }
 }
 
-export function getAverageScore() {
+export async function getAverageScore() {
   if (typeof window === "undefined") return 0;
 
   try {
-    const history = getChallengeHistory();
-    const evaluations = history
+    const history = await getChallengeHistory();
+    const learningPlan = await getLearningPlan();
+
+    console.log('📊 getAverageScore - Current plan:', learningPlan?.id);
+
+    // Calcular solo para retos del plan actual
+    const planChallenges = learningPlan?.id
+      ? history.filter(entry => entry.planId === learningPlan.id)
+      : history;
+
+    const evaluations = planChallenges
       .filter(
         (entry) =>
           entry.evaluation && typeof entry.evaluation.score === "number"
       )
       .map((entry) => entry.evaluation.score);
 
+    console.log('📊 Evaluations for average:', evaluations);
+
     if (evaluations.length === 0) return 0;
 
     const sum = evaluations.reduce((total, score) => total + score, 0);
-    return Math.round(sum / evaluations.length);
-  } catch {
+    const avg = Math.round(sum / evaluations.length);
+    console.log('📊 Average score:', avg);
+    return avg;
+  } catch (error) {
+    console.error('Error in getAverageScore:', error);
     return 0;
   }
 }
-
-// Configuración del plan de aprendizaje para retos
-import { saveLearningPlanToDB, checkPlanLimit } from './userProgress';
 
 export async function saveLearningPlan(plan) {
   if (typeof window === "undefined") return;
@@ -270,7 +310,7 @@ export async function saveLearningPlan(plan) {
   try {
     // Verificar límite de planes
     const limitCheck = await checkPlanLimit();
-    
+
     if (!limitCheck.hasSpace) {
       throw new Error(`Has alcanzado el límite de ${limitCheck.maxPlans} planes de aprendizaje. Por favor, elimina alguno antes de crear uno nuevo.`);
     }
@@ -282,52 +322,58 @@ export async function saveLearningPlan(plan) {
       savedAt: new Date().toISOString(),
     };
 
-    // Guardar en localStorage
-    localStorage.setItem("learningPlan", JSON.stringify(planData));
+    // Guardar en BD y obtener el planId
+    const result = await saveLearningPlanToDB(planData);
 
-    // Limpiar historial de retos cuando se crea un nuevo plan
-    localStorage.removeItem("challengeHistory");
-    localStorage.setItem("currentChallengeIndex", "0");
+    console.log('✅ Plan guardado en BD con ID:', result.plan.id);
 
-    // Guardar en BD si está autenticado
-    try {
-      await saveLearningPlanToDB(planData);
-      console.log('✅ Plan guardado en BD');
-    } catch (error) {
-      if (error.message.includes('límite')) {
-        throw error; // Re-lanzar error de límite
-      }
-      console.warn('⚠️ Plan guardado solo localmente:', error.message);
-    }
+    // Resetear índice de retos en memoria
+    currentChallengeIndexCache = 0;
+
+    return result.plan;
   } catch (error) {
     console.error("Error saving learning plan:", error);
     throw error;
   }
 }
 
-export function getLearningPlan() {
+export async function getLearningPlan() {
   if (typeof window === "undefined") return null;
 
   try {
-    const plan = localStorage.getItem("learningPlan");
-    return plan ? JSON.parse(plan) : null;
-  } catch {
+    const progress = await getUserProgress();
+    if (!progress || !progress.learning_plan) {
+      console.log('⚠️ No progress or learning_plan found');
+      return null;
+    }
+
+    const currentPlan = progress.learning_plan.currentPlan || null;
+    console.log('📋 Current learning plan:', currentPlan?.goal, 'planId:', currentPlan?.id);
+    return currentPlan;
+  } catch (error) {
+    console.error("Error getting learning plan:", error);
     return null;
   }
 }
 
 // Utilidades para generar retos
 export async function generateChallenge(challengeIndex = 0) {
-  const plan = getLearningPlan();
+  const plan = await getLearningPlan();
 
   if (!plan) {
     throw new Error("No hay plan de aprendizaje configurado");
   }
 
-  const history = getChallengeHistory();
-  const previousChallenges = history
+  const history = await getChallengeHistory();
+
+  // Filtrar historial del plan actual
+  const planHistory = plan.id
+    ? history.filter(entry => entry.planId === plan.id)
+    : history;
+
+  const previousChallenges = planHistory
     .slice(Math.max(0, challengeIndex - 3), challengeIndex)
-    .filter((entry) => entry && entry.challenge) // Filtrar entradas válidas
+    .filter((entry) => entry && entry.challenge)
     .map((entry) => ({
       title: entry.challenge.title || "Reto anterior",
       concepts: entry.challenge.concepts || [],
@@ -477,39 +523,14 @@ function generateFallbackChallenge(index, plan) {
   };
 }
 
-// Reset del progreso (útil para testing o empezar de nuevo)
-export function resetChallengeProgress() {
+// Función de debug para revisar datos
+export async function debugChallengeData() {
   if (typeof window === "undefined") return;
 
   try {
-    localStorage.removeItem("challengeHistory");
-    localStorage.removeItem("currentChallengeIndex");
-  } catch (error) {
-    console.error("Error resetting challenge progress:", error);
-  }
-}
-
-export function resetAll() {
-  if (typeof window === "undefined") return;
-
-  try {
-    localStorage.removeItem("challengeHistory");
-    localStorage.removeItem("currentChallengeIndex");
-    localStorage.removeItem("learningPlan");
-    console.log("All challenge data has been reset");
-  } catch (error) {
-    console.error("Error resetting all data:", error);
-  }
-}
-
-// Función de debug para revisar y limpiar datos corruptos
-export function debugChallengeData() {
-  if (typeof window === "undefined") return;
-
-  try {
-    const history = getChallengeHistory();
+    const history = await getChallengeHistory();
     const currentIndex = getCurrentChallengeIndex();
-    const plan = getLearningPlan();
+    const plan = await getLearningPlan();
 
     console.group("🔍 Challenge Debug Info");
     console.log("Current Index:", currentIndex);
@@ -518,8 +539,8 @@ export function debugChallengeData() {
     console.log(
       "History Preview:",
       history.slice(0, 3).map((entry) => ({
-        index: history.indexOf(entry),
         title: entry?.challenge?.title,
+        planId: entry?.planId,
         hasCode: !!entry?.code,
         hasEvaluation: !!entry?.evaluation,
       }))

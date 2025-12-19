@@ -7,17 +7,24 @@ import { saveLearningPlan } from "../lib/challengeManager";
 export default function PlanView({ plan }) {
   const [completedModules, setCompletedModules] = useState([]);
   const [error, setError] = useState(null);
+  const [planSaved, setPlanSaved] = useState(false);
 
   useEffect(() => {
     setCompletedModules(getCompletedModules());
 
-    // Guardar el plan para los retos infinitos
-    if (plan) {
-      saveLearningPlan(plan).catch(err => {
-        setError(err.message);
-      });
+    // Guardar el plan para los retos infinitos solo una vez
+    if (plan && !planSaved) {
+      const savePlan = async () => {
+        try {
+          await saveLearningPlan(plan);
+          setPlanSaved(true);
+        } catch (err) {
+          setError(err.message);
+        }
+      };
+      savePlan();
     }
-  }, [plan]);
+  }, [plan, planSaved]);
 
   const totalModules = plan.modules.length;
   const validCompletedModules = completedModules.filter((moduleId) =>
@@ -37,18 +44,34 @@ export default function PlanView({ plan }) {
       {error && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg
+              className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
             <div>
-              <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">Límite de planes alcanzado</h3>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">{error}</p>
-              <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">Ve a tu perfil para administrar tus planes de aprendizaje.</p>
+              <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">
+                Límite de planes alcanzado
+              </h3>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                {error}
+              </p>
+              <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                Ve a tu perfil para administrar tus planes de aprendizaje.
+              </p>
             </div>
           </div>
         </div>
       )}
-      
+
       <div className="bg-gradient-to-br from-primary/5 to-secondary/5 border border-border rounded-xl p-8">
         <div className="flex items-start gap-4 mb-6">
           <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">

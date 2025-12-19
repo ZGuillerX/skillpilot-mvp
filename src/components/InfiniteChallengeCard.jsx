@@ -51,12 +51,13 @@ export default function InfiniteChallengeCard() {
   });
   const [editorTheme, setEditorTheme] = useState("vs-dark");
 
-  const updateStats = () => {
-    setStats({
-      completed: getCompletedChallengesCount(),
-      averageScore: getAverageScore(),
-      totalAttempts: getTotalAttempts(),
-    });
+  const updateStats = async () => {
+    const [completed, averageScore, totalAttempts] = await Promise.all([
+      getCompletedChallengesCount(),
+      getAverageScore(),
+      getTotalAttempts(),
+    ]);
+    setStats({ completed, averageScore, totalAttempts });
   };
 
   const loadChallenge = async (index) => {
@@ -65,7 +66,7 @@ export default function InfiniteChallengeCard() {
     try {
       setCurrentChallengeIndex(index);
       setCurrentIndex(index);
-      const entry = getChallengeFromHistory(index);
+      const entry = await getChallengeFromHistory(index);
       if (entry && entry.challenge) {
         setChallenge(entry.challenge);
         setCode(entry.code || "");
@@ -78,7 +79,7 @@ export default function InfiniteChallengeCard() {
         setEvaluation(null);
         setIsCompleted(false);
       }
-      updateStats();
+      await updateStats();
     } catch (error) {
       console.error("Error loading challenge:", error);
       const fallbackChallenge = {
@@ -146,8 +147,8 @@ export default function InfiniteChallengeCard() {
       }
 
       if (challenge && result) {
-        saveChallengeToHistory(challenge, code, result);
-        updateStats();
+        await saveChallengeToHistory(challenge, code, result);
+        await updateStats();
       }
     } catch (error) {
       console.error("Error evaluating code:", error);
@@ -160,8 +161,8 @@ export default function InfiniteChallengeCard() {
       setEvaluation(errorResult);
 
       if (challenge) {
-        saveChallengeToHistory(challenge, code, errorResult);
-        updateStats();
+        await saveChallengeToHistory(challenge, code, errorResult);
+        await updateStats();
       }
     } finally {
       setIsEvaluating(false);
@@ -188,11 +189,14 @@ export default function InfiniteChallengeCard() {
   };
 
   useEffect(() => {
-    const plan = getLearningPlan();
-    setLearningPlan(plan);
-    if (plan) {
-      loadChallenge(0);
-    }
+    const loadData = async () => {
+      const plan = await getLearningPlan();
+      setLearningPlan(plan);
+      if (plan) {
+        await loadChallenge(0);
+      }
+    };
+    loadData();
   }, []);
 
   if (!learningPlan) {
@@ -463,7 +467,7 @@ export default function InfiniteChallengeCard() {
                           className="w-full flex items-center justify-between px-3 py-2 font-semibold text-sm text-foreground hover:bg-muted transition-all"
                         >
                           <span className="flex items-center gap-2">
-                            📋 Ejemplos
+                            Ejemplos
                           </span>
                           <span className="transition-transform duration-300">
                             {showExamples ? "▼" : "▶"}

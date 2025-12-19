@@ -64,7 +64,7 @@ export default function ModuleCard({ module, index, onComplete }) {
             <span className="text-green-600 text-xs">✅ Link verificado</span>
           )}
           {linkStatus === "invalid" && (
-            <span className="text-red-600 text-xs">⚠️ Link alternativo</span>
+            <span className="text-red-600 text-xs">Link alternativo</span>
           )}
         </div>
 
