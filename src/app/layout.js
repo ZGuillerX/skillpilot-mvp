@@ -1,6 +1,7 @@
 import { Montserrat, Open_Sans } from "next/font/google";
 import "./global.css";
 import Navbar from "@/components/Navbar";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -25,10 +26,12 @@ export default function RootLayout({ children }) {
       <body
         className={`${montserrat.variable} ${openSans.variable} antialiased bg-background text-foreground`}
       >
-        <main>
-          <Navbar />
-          {children}
-        </main>
+        <AuthProvider>
+          <main>
+            <Navbar />
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -5,11 +5,16 @@ import {
   getLearningPlan,
   getCompletedChallengesCount,
 } from "@/lib/challengeManager";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [learningPlan, setLearningPlan] = useState(null);
   const [completedChallenges, setCompletedChallenges] = useState(0);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     setLearningPlan(getLearningPlan());
@@ -30,6 +35,11 @@ export default function Navbar() {
 
   const closeMenu = () => {
     setIsOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
   };
 
   const navItems = [
@@ -152,6 +162,75 @@ export default function Navbar() {
               </div>
             )}
 
+            {/* User Menu */}
+            {user ? (
+              <div className="hidden md:block relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium text-foreground">
+                    {user.name}
+                  </span>
+                  <svg
+                    className="w-4 h-4 text-muted-foreground"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-primary/10 transition-colors flex items-center gap-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        />
+                      </svg>
+                      Cerrar sesión
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-2">
+                <a
+                  href="/login"
+                  className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+                >
+                  Iniciar sesión
+                </a>
+                <a
+                  href="/register"
+                  className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Registrarse
+                </a>
+              </div>
+            )}
+
             {/* Mobile menu button */}
             <div className="md:hidden">
               <button
@@ -236,6 +315,61 @@ export default function Navbar() {
                     {completedChallenges} retos completados
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* User Menu Mobile */}
+            {user ? (
+              <div className="px-3 py-3 border-t border-border">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {user.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-primary/10 rounded-lg transition-colors"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Cerrar sesión
+                </button>
+              </div>
+            ) : (
+              <div className="px-3 py-3 border-t border-border flex flex-col gap-2">
+                <a
+                  href="/login"
+                  className="w-full text-center px-4 py-2 text-sm font-medium text-foreground hover:bg-primary/10 rounded-lg transition-colors"
+                  onClick={closeMenu}
+                >
+                  Iniciar sesión
+                </a>
+                <a
+                  href="/register"
+                  className="w-full text-center px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  onClick={closeMenu}
+                >
+                  Registrarse
+                </a>
               </div>
             )}
           </div>

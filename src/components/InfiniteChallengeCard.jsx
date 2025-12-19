@@ -584,7 +584,7 @@ export default function InfiniteChallengeCard() {
                                 : "text-gray-300"
                             }`}
                           >
-                            {theme.label}
+                            {theme.name}
                           </button>
                         ))}
                       </div>
