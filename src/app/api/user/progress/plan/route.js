@@ -39,7 +39,7 @@ export async function POST(request) {
             learningPlanData = typeof rows[0].learning_plan === 'string'
                 ? JSON.parse(rows[0].learning_plan)
                 : rows[0].learning_plan;
-            
+
             // Preservar el historial existente
             if (rows[0].challenge_history) {
                 existingHistory = typeof rows[0].challenge_history === 'string'

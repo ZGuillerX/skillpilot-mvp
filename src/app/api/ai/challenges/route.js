@@ -196,8 +196,7 @@ export async function POST(req) {
       challengeNumber: currentChallenge + 1,
       previousChallenges: previousChallenges.slice(-3), // Solo los últimos 3 para contexto
       instructions: `
-        Genera el reto número ${
-          currentChallenge + 1
+        Genera el reto número ${currentChallenge + 1
         } para alguien que está aprendiendo ${goal}.
         
         Contexto:
@@ -227,7 +226,7 @@ export async function POST(req) {
       });
     } catch (error) {
       console.log("Primary model failed, trying fallback...");
-      
+
       // Si es error de rate limit, usar reto de ejemplo directamente
       if (error.message?.includes('429') || error.message?.includes('rate_limit')) {
         console.log('Rate limit reached, using fallback challenge');

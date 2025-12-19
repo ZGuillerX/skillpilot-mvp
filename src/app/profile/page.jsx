@@ -102,27 +102,30 @@ export default function ProfilePage() {
 
   const plans = progress?.learning_plan?.plans || [];
   const currentPlan = progress?.learning_plan?.currentPlan;
-  
+
   // Calcular estadísticas solo del plan activo
   const currentPlanChallenges = currentPlan
     ? progress?.challenge_history?.filter(
         (entry) => entry.planId === currentPlan.id
       ) || []
     : [];
-  
+
   const completedChallenges = currentPlanChallenges.filter(
     (entry) => entry.evaluation?.success
   ).length;
-  
+
   const totalChallenges = currentPlanChallenges.length;
-  
+
   const scores = currentPlanChallenges
     .filter((entry) => entry.evaluation?.score !== undefined)
     .map((entry) => entry.evaluation.score);
-  
-  const averageScore = scores.length > 0
-    ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
-    : 0;
+
+  const averageScore =
+    scores.length > 0
+      ? Math.round(
+          scores.reduce((sum, score) => sum + score, 0) / scores.length
+        )
+      : 0;
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
