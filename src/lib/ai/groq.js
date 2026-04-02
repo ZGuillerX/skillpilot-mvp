@@ -8,7 +8,8 @@ export const groq = new Groq({
 export async function askJSON({
   system,
   user,
-  model = "llama-3.1-8b-instant", // Este modelo sigue disponible según la documentación
+  model = "llama-3.3-70b-versatile", 
+  temperature = 0.3,
 }) {
   try {
     const res = await groq.chat.completions.create({
@@ -17,7 +18,7 @@ export async function askJSON({
         { role: "system", content: system },
         { role: "user", content: JSON.stringify(user) },
       ],
-      temperature: 0.3,
+      temperature,
     });
 
     const content = res?.choices?.[0]?.message?.content || "{}";

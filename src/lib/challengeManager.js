@@ -53,7 +53,8 @@ export function setCurrentChallengeIndex(index) {
 export async function saveChallengeToHistory(
   challenge,
   code = "",
-  evaluation = null
+  evaluation = null,
+  files = null
 ) {
   if (typeof window === "undefined") return;
 
@@ -89,6 +90,7 @@ export async function saveChallengeToHistory(
         exampleOutput: challenge.exampleOutput || null,
       },
       code,
+      files,
       evaluation,
       completedAt: evaluation?.success ? new Date().toISOString() : null,
       attempts: 1,

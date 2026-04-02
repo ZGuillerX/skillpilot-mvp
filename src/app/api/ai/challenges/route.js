@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import { askJSON } from "@/lib/ai/groq";
 
 const SYSTEM_CHALLENGES = `
-Eres un generador experto de retos de programación para SkillPilot. 
-Generas retos PROGRESIVOS y ESPECÍFICOS para la tecnología solicitada.
+Eres un generador experto de retos de programación para SkillPilot.
+Generas retos PROGRESIVOS, PRÁCTICOS y MOTIVADORES adaptados al nivel real del estudiante.
 
 REGLAS CRÍTICAS:
 - Genera retos EXCLUSIVAMENTE para la tecnología/lenguaje solicitado
 - Los retos deben ser PROGRESIVOS: cada uno más complejo que el anterior
 - Adapta la dificultad según el nivel (beginner/intermediate/advanced)
 - NUNCA mezcles tecnologías diferentes
+- Los retos beginner deben ser MUY simples y alcanzables en pocos minutos
+- Los retos deben tener contexto práctico y motivador
 
 RESPONDE EXCLUSIVAMENTE EN JSON con esta estructura EXACTA:
 
@@ -29,123 +31,162 @@ RESPONDE EXCLUSIVAMENTE EN JSON con esta estructura EXACTA:
   }
 }
 
-TIPOS DE RETOS POR NIVEL:
+PROGRESIÓN DETALLADA POR NIVEL:
 
-BEGINNER:
-- Sintaxis básica, variables, tipos de datos
-- Condicionales simples (if/else)
-- Bucles básicos (for, while)
-- Funciones simples
-- Operaciones matemáticas básicas
+BEGINNER (retos 1-4):
+- Reto 1: Sintaxis más básica posible — imprimir texto, declarar variables
+- Reto 2: Operaciones simples — sumar dos números, concatenar strings
+- Reto 3: Condicional simple — if/else con una condición
+- Reto 4: Bucle básico — recorrer un array o repetir algo N veces
+- Tiempo estimado: 5-15 minutos
+- Descripción muy clara, con ejemplo de entrada y salida
 
-INTERMEDIATE:
-- Estructuras de datos (arrays, objetos, listas, diccionarios)
-- Funciones más complejas con múltiples parámetros
+BEGINNER → INTERMEDIATE (retos 5-7):
+- Reto 5: Función simple con parámetros y return
+- Reto 6: Manipulación de arrays u objetos básica
+- Reto 7: Combinar condicionales y bucles
+- Tiempo estimado: 15-25 minutos
+
+INTERMEDIATE (retos 8-12):
+- Estructuras de datos: arrays de objetos, diccionarios anidados
+- Funciones con múltiples parámetros y lógica real
 - Manejo de strings avanzado
-- Algoritmos de ordenamiento básicos
-- Validaciones y manejo de errores
+- Algoritmos simples: buscar, filtrar, transformar datos
+- Tiempo estimado: 20-40 minutos
 
-ADVANCED:
-- Algoritmos complejos (recursión, divide y vencerás)
-- Estructuras de datos avanzadas
-- Optimización de performance
-- Patrones de diseño
-- Arquitectura y mejores prácticas
+INTERMEDIATE → ADVANCED (retos 13-15):
+- Algoritmos con múltiples pasos
+- Manejo de errores y validaciones
+- Funciones que llaman a otras funciones
+- Tiempo estimado: 30-50 minutos
 
-EJEMPLOS DE PROGRESIÓN:
+ADVANCED (retos 16+):
+- Recursión, divide y vencerás
+- Patrones de diseño aplicados
+- Optimización y performance
+- Arquitectura de soluciones
+- Tiempo estimado: 45-90 minutos
 
-Para JavaScript:
-1. Beginner: "Crear una función que sume dos números"
-2. Beginner+: "Función que determine si un número es par o impar"
-3. Intermediate: "Función que encuentre el mayor número en un array"
-4. Intermediate+: "Implementar un contador de palabras en un texto"
-5. Advanced: "Implementar un algoritmo de ordenamiento quicksort"
+TONO Y ESTILO:
+- Títulos motivadores y concretos: "Calcula el área de un rectángulo" no "Función matemática"
+- Descripción clara con contexto del mundo real cuando sea posible
+- Ejemplos de entrada/salida siempre que aplique
+- Criterios de aceptación específicos y verificables, no genéricos
+- Pistas que guíen sin dar la solución
 
-IMPORTANTE:
-- Cada reto debe tener contexto práctico
-- Incluye ejemplos de entrada y salida cuando sea relevante
-- Los criterios de aceptación deben ser específicos y verificables
-- Las pistas deben guiar sin dar la respuesta completa
+EJEMPLOS DE BUENA PROGRESIÓN para JavaScript:
+1. "Imprime tu nombre en consola" (beginner puro)
+2. "Suma dos números y muestra el resultado" (beginner)
+3. "Di si un número es positivo, negativo o cero" (beginner)
+4. "Muestra los números del 1 al 10" (beginner)
+5. "Crea una función que devuelva el doble de un número" (beginner+)
+6. "Filtra los números pares de un array" (intermediate-)
+7. "Encuentra el número mayor de un array" (intermediate)
+8. "Cuenta cuántas veces aparece cada palabra en un texto" (intermediate)
+9. "Ordena un array de objetos por una propiedad" (intermediate+)
+10. "Implementa una función de búsqueda binaria" (advanced)
 `;
 
-// Función para generar retos de respaldo cuando falla la IA
 function generateFallbackChallenge(index, language, difficulty, goal) {
-  const challenges = {
-    JavaScript: [
+  const byDifficulty = {
+    beginner: [
       {
-        title: "Función Suma Simple",
-        description: "Crea una función que tome dos números como parámetros y devuelva su suma.",
+        title: "Imprime un mensaje",
+        description: `Crea un programa en ${language} que imprima el mensaje "¡Hola, mundo!" en la consola.`,
+        concepts: ["consola", "output", "sintaxis básica"],
+        exampleInput: "ninguno",
+        exampleOutput: "¡Hola, mundo!",
+        estimatedTimeMinutes: 5,
+      },
+      {
+        title: "Suma dos números",
+        description: `Crea una función en ${language} que reciba dos números y devuelva su suma.`,
         concepts: ["funciones", "parámetros", "return"],
-        exampleInput: "suma(5, 3)",
+        exampleInput: "suma(3, 5)",
         exampleOutput: "8",
+        estimatedTimeMinutes: 10,
       },
       {
-        title: "Filtrar Array",
-        description: "Crea una función que filtre un array de números y devuelva solo los números pares.",
-        concepts: ["arrays", "filter", "funciones arrow"],
-        exampleInput: "[1, 2, 3, 4, 5, 6]",
-        exampleOutput: "[2, 4, 6]",
-      },
-    ],
-    Python: [
-      {
-        title: "Función de Saludo",
-        description: "Crea una función que tome un nombre como parámetro y devuelva un saludo personalizado.",
-        concepts: ["funciones", "strings", "f-strings"],
-        exampleInput: "saludar('Ana')",
-        exampleOutput: "'Hola Ana, ¡bienvenida!'",
-      },
-      {
-        title: "Contador de Palabras",
-        description: "Crea una función que cuente la frecuencia de cada palabra en un texto.",
-        concepts: ["diccionarios", "split", "loops"],
-        exampleInput: "'el gato subió al tejado'",
-        exampleOutput: "{'el': 1, 'gato': 1, 'subió': 1, 'al': 1, 'tejado': 1}",
+        title: "¿Es par o impar?",
+        description: `Crea una función que reciba un número y devuelva "par" si es par o "impar" si no lo es.`,
+        concepts: ["condicionales", "módulo", "funciones"],
+        exampleInput: "parOImpar(4)",
+        exampleOutput: '"par"',
+        estimatedTimeMinutes: 10,
       },
     ],
-    django: [
+    intermediate: [
       {
-        title: "Modelo Django Simple",
-        description: "Crea un modelo Django para representar un artículo de blog con título, contenido y fecha de publicación.",
-        concepts: ["modelos", "campos", "DateTimeField"],
-        exampleInput: "class Article(models.Model):",
-        exampleOutput: "Modelo con campos title, content, published_date",
+        title: "Filtrar array de objetos",
+        description: `Crea una función que reciba un array de objetos y devuelva solo los que cumplan una condición dada.`,
+        concepts: ["arrays", "filter", "objetos"],
+        exampleInput: "filtrar([{nombre:'Ana', edad:20}], 'edad', 20)",
+        exampleOutput: "[{nombre:'Ana', edad:20}]",
+        estimatedTimeMinutes: 25,
       },
       {
-        title: "Vista Django Básica",
-        description: "Crea una vista basada en función que liste todos los artículos del blog.",
-        concepts: ["vistas", "QuerySet", "render"],
-        exampleInput: "def article_list(request):",
-        exampleOutput: "Vista que renderiza lista de artículos",
+        title: "Contador de palabras",
+        description: `Crea una función que cuente la frecuencia de cada palabra en un texto y devuelva un objeto con los resultados.`,
+        concepts: ["strings", "objetos", "loops"],
+        exampleInput: "contarPalabras('el gato y el perro')",
+        exampleOutput: "{ el: 2, gato: 1, y: 1, perro: 1 }",
+        estimatedTimeMinutes: 30,
+      },
+    ],
+    advanced: [
+      {
+        title: "Búsqueda binaria",
+        description: `Implementa una función de búsqueda binaria que encuentre el índice de un elemento en un array ordenado. Debe retornar -1 si no existe.`,
+        concepts: ["algoritmos", "recursión", "divide y vencerás"],
+        exampleInput: "busquedaBinaria([1,3,5,7,9], 5)",
+        exampleOutput: "2",
+        estimatedTimeMinutes: 45,
       },
     ],
   };
 
-  const langChallenges = challenges[language] || challenges.JavaScript;
-  const challengeIndex = index % langChallenges.length;
-  const template = langChallenges[challengeIndex];
+  const pool = byDifficulty[difficulty] || byDifficulty.beginner;
+  const template = pool[index % pool.length];
 
   return {
     id: `fallback-${index}-${Date.now()}`,
     title: template.title,
     description: template.description,
-    language: language,
-    difficulty: difficulty,
+    language,
+    difficulty,
     acceptanceCriteria: [
-      "El código ejecuta sin errores",
-      "Cumple con los requisitos especificados",
-      "Código limpio y bien comentado",
+      "El código ejecuta sin errores de sintaxis",
+      "La función devuelve el resultado correcto",
+      "Funciona con los ejemplos dados",
     ],
     hints: [
-      "Lee cuidadosamente la descripción del problema",
-      "Prueba tu código con los ejemplos dados",
-      "Considera casos edge como entradas vacías",
+      "Lee el ejemplo de entrada y salida con cuidado",
+      "Empieza con el caso más simple antes de complicarlo",
     ],
     exampleInput: template.exampleInput,
     exampleOutput: template.exampleOutput,
     concepts: template.concepts,
-    estimatedTimeMinutes: 30,
+    estimatedTimeMinutes: template.estimatedTimeMinutes,
   };
+}
+
+function getTargetDifficulty(currentChallenge, baseDifficulty) {
+  if (baseDifficulty === "beginner") {
+    if (currentChallenge < 5) return "beginner";
+    if (currentChallenge < 10) return "intermediate";
+    return "advanced";
+  }
+
+  if (baseDifficulty === "intermediate") {
+    if (currentChallenge < 3) return "beginner";
+    if (currentChallenge < 10) return "intermediate";
+    return "advanced";
+  }
+
+  // advanced
+  if (currentChallenge < 2) return "beginner";
+  if (currentChallenge < 5) return "intermediate";
+  return "advanced";
 }
 
 export async function POST(req) {
@@ -165,116 +206,92 @@ export async function POST(req) {
       );
     }
 
-    // Determinar dificultad basada en el número de reto y nivel base
-    const baseDifficulty = level;
-    let targetDifficulty = baseDifficulty;
-
-    if (currentChallenge >= 0 && currentChallenge < 3) {
-      targetDifficulty = "beginner";
-    } else if (currentChallenge >= 3 && currentChallenge < 7) {
-      targetDifficulty =
-        baseDifficulty === "advanced" ? "intermediate" : "beginner";
-      if (baseDifficulty === "intermediate" && currentChallenge >= 5) {
-        targetDifficulty = "intermediate";
-      }
-    } else {
-      // Retos avanzados
-      if (baseDifficulty === "beginner") {
-        targetDifficulty = currentChallenge >= 10 ? "intermediate" : "beginner";
-      } else if (baseDifficulty === "intermediate") {
-        targetDifficulty = currentChallenge >= 10 ? "advanced" : "intermediate";
-      } else {
-        targetDifficulty = "advanced";
-      }
-    }
+    const targetDifficulty = getTargetDifficulty(currentChallenge, level);
 
     const userPrompt = {
       goal,
-      level: baseDifficulty,
+      level,
       language,
       targetDifficulty,
       challengeNumber: currentChallenge + 1,
-      previousChallenges: previousChallenges.slice(-3), // Solo los últimos 3 para contexto
+      previousChallenges: previousChallenges.slice(-3),
       instructions: `
-        Genera el reto número ${currentChallenge + 1
-        } para alguien que está aprendiendo ${goal}.
-        
+        Genera el reto número ${currentChallenge + 1} para alguien aprendiendo ${goal}.
+
         Contexto:
-        - Nivel base del usuario: ${baseDifficulty}
+        - Nivel base del usuario: ${level}
         - Dificultad objetivo para este reto: ${targetDifficulty}
         - Lenguaje/tecnología: ${language}
-        - Número de reto: ${currentChallenge + 1}
-        
+        - Número de reto en la secuencia: ${currentChallenge + 1}
+
         El reto debe:
         1. Ser específico para ${language}
-        2. Tener dificultad ${targetDifficulty}
-        3. Ser progresivo respecto a retos anteriores
+        2. Tener dificultad ${targetDifficulty} según la guía de progresión
+        3. Ser más complejo que los retos anteriores
         4. Incluir conceptos relevantes para ${goal}
-        5. Ser práctico y realista
-        
-        NO repitas retos anteriores, sé creativo pero relevante.
+        5. Tener descripción clara con ejemplo de entrada y salida
+        6. Ser alcanzable — no frustrante
+
+        ${currentChallenge === 0
+          ? "Este es el PRIMER reto. Debe ser muy simple y accesible para alguien que está comenzando."
+          : `Retos anteriores: ${previousChallenges.slice(-2).map(c => c.title).join(", ")}. No los repitas.`
+        }
       `,
     };
 
-    // Intentar con el modelo más potente disponible, con múltiples fallbacks
     let result;
     try {
       result = await askJSON({
         system: SYSTEM_CHALLENGES,
         user: userPrompt,
         model: "llama-3.3-70b-versatile",
+        temperature: 0.7, // Un poco de creatividad para variar los retos
       });
     } catch (error) {
-      console.log("Primary model failed, trying fallback...");
+      console.log("Primary model failed:", error.message);
 
-      // Si es error de rate limit, usar reto de ejemplo directamente
-      if (error.message?.includes('429') || error.message?.includes('rate_limit')) {
-        console.log('Rate limit reached, using fallback challenge');
+      if (error.message?.includes("429") || error.message?.includes("rate_limit")) {
+        console.log("Rate limit reached, using fallback");
         result = { challenge: generateFallbackChallenge(currentChallenge, language, targetDifficulty, goal) };
       } else {
         try {
-          // Intentar con modelo alternativo
           result = await askJSON({
             system: SYSTEM_CHALLENGES,
             user: userPrompt,
             model: "llama-3.1-8b-instant",
+            temperature: 0.7,
           });
-        } catch (fallbackError) {
-          console.log('All models failed, using fallback challenge');
+        } catch {
+          console.log("All models failed, using fallback");
           result = { challenge: generateFallbackChallenge(currentChallenge, language, targetDifficulty, goal) };
         }
       }
     }
 
-    if (!result.challenge) {
-      console.log('No challenge generated, using fallback');
+    if (!result?.challenge) {
       result = { challenge: generateFallbackChallenge(currentChallenge, language, targetDifficulty, goal) };
     }
 
-    // Validar que el reto tenga la estructura correcta
     const challenge = {
-      id:
-        result.challenge.id ||
-        `challenge-${currentChallenge + 1}-${Date.now()}`,
+      id: result.challenge.id || `challenge-${currentChallenge + 1}-${Date.now()}`,
       title: result.challenge.title || `Reto ${currentChallenge + 1}`,
       description: result.challenge.description || "Descripción no disponible",
-      language: language, // Forzar el lenguaje correcto
+      language,
       difficulty: targetDifficulty,
       acceptanceCriteria: Array.isArray(result.challenge.acceptanceCriteria)
         ? result.challenge.acceptanceCriteria
-        : ["Funciona correctamente", "Código limpio", "Cumple los requisitos"],
+        : ["El código ejecuta sin errores", "Cumple con los requisitos", "Devuelve el resultado correcto"],
       hints: Array.isArray(result.challenge.hints)
         ? result.challenge.hints
-        : ["Revisa la sintaxis básica", "Considera los casos edge"],
+        : ["Lee el ejemplo con cuidado", "Empieza con el caso más simple"],
       exampleInput: result.challenge.exampleInput || null,
       exampleOutput: result.challenge.exampleOutput || null,
       concepts: Array.isArray(result.challenge.concepts)
         ? result.challenge.concepts
         : ["Conceptos básicos"],
-      estimatedTimeMinutes:
-        typeof result.challenge.estimatedTimeMinutes === "number"
-          ? result.challenge.estimatedTimeMinutes
-          : 30,
+      estimatedTimeMinutes: typeof result.challenge.estimatedTimeMinutes === "number"
+        ? result.challenge.estimatedTimeMinutes
+        : 15,
     };
 
     return NextResponse.json({ challenge }, { status: 200 });
