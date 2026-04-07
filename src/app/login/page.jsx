@@ -18,8 +18,8 @@ export default function LoginPage() {
     setError("");
 
     // Validación del lado del cliente
-    if (password.length < 6 || password.length > 8) {
-      setError("La contraseña debe tener entre 6 y 8 caracteres");
+    if (!email || !password) {
+      setError("Email y contraseña son requeridos");
       return;
     }
 
@@ -29,7 +29,7 @@ export default function LoginPage() {
       await login(email, password);
       router.push("/");
     } catch (err) {
-      setError(err.message);
+      setError("Email o contraseña incorrectos");
     } finally {
       setLoading(false);
     }
@@ -89,6 +89,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  maxLength="20"
                   required
                   className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
                   placeholder="••••••••"
@@ -135,6 +136,15 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-sm text-primary hover:underline font-medium"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
 
             <button

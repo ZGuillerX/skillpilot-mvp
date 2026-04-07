@@ -21,15 +21,36 @@ export async function POST(request) {
         if (password.length < 6) {
             console.log(' Contraseña muy corta:', password.length);
             return NextResponse.json(
-                { error: 'La contraseña debe tener entre 6 y 8 caracteres' },
+                { error: 'La contraseña debe tener entre 6 y 20 caracteres' },
                 { status: 400 }
             );
         }
 
-        if (password.length > 8) {
+        if (password.length > 20) {
             console.log(' Contraseña muy larga:', password.length);
             return NextResponse.json(
-                { error: 'La contraseña no puede exceder 8 caracteres' },
+                { error: 'La contraseña no puede exceder 20 caracteres' },
+                { status: 400 }
+            );
+        }
+
+        if (password.length <= 8) {
+            return NextResponse.json(
+                { error: 'La contraseña debe tener más de 8 caracteres' },
+                { status: 400 }
+            );
+        }
+
+        if (!/[A-Z]/.test(password)) {
+            return NextResponse.json(
+                { error: 'La contraseña debe contener al menos una mayúscula (A-Z)' },
+                { status: 400 }
+            );
+        }
+
+        if (!/[0-9]/.test(password)) {
+            return NextResponse.json(
+                { error: 'La contraseña debe contener al menos un número (0-9)' },
                 { status: 400 }
             );
         }

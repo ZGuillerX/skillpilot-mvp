@@ -1,7 +1,12 @@
 -- Crear base de datos
 CREATE DATABASE IF NOT EXISTS skillpilot_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE skillpilot_db;
+-- Eliminar tablas si existen (en orden inverso de dependencias)
+DROP TABLE IF EXISTS user_progress;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS users;
 -- Tabla de usuarios
+-- Password constraint: minimum 6 characters, maximum 20 characters (before hashing)
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(36) PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -10,11 +15,14 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url VARCHAR(500) DEFAULT NULL,
     learning_goal TEXT DEFAULT NULL,
     preferred_language VARCHAR(50) DEFAULT NULL,
+    reset_token VARCHAR(36) DEFAULT NULL,
+    reset_token_expires TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     is_active BOOLEAN DEFAULT true,
     INDEX idx_email (email),
+    INDEX idx_reset_token (reset_token),
     INDEX idx_created_at (created_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 -- Tabla de sesiones

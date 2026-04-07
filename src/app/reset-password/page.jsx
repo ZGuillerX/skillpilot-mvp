@@ -1,58 +1,59 @@
 "use client";
-import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function RegisterPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
+export default function ResetPasswordPage() {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const [tokenValid, setTokenValid] = useState(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  useEffect(() => {
+    if (!token) {
+      setError("Token inválido o expirado");
+      setTokenValid(false);
+      return;
+    }
+    setTokenValid(true);
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    // Validación del lado del cliente
-    if (formData.password.length < 6 || formData.password.length > 20) {
+    if (!password || !confirmPassword) {
+      setError("Por favor completa todos los campos");
+      return;
+    }
+
+    if (password.length < 6 || password.length > 20) {
       setError("La contraseña debe tener entre 6 y 20 caracteres");
       return;
     }
 
-    if (formData.password.length <= 8) {
+    if (password.length <= 8) {
       setError("La contraseña debe tener más de 8 caracteres");
       return;
     }
 
-    // Validar que tenga mayúscula
-    if (!/[A-Z]/.test(formData.password)) {
+    if (!/[A-Z]/.test(password)) {
       setError("La contraseña debe contener al menos una mayúscula (A-Z)");
       return;
     }
 
-    // Validar que tenga número
-    if (!/[0-9]/.test(formData.password)) {
+    if (!/[0-9]/.test(password)) {
       setError("La contraseña debe contener al menos un número (0-9)");
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
     }
@@ -60,17 +61,68 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register(formData.name, formData.email, formData.password);
-      router.push("/");
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Error al restablecer contraseña");
+        return;
+      }
+
+      setError("");
+      // Mostrar mensaje de éxito y redirigir
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
     } catch (err) {
-      setError(err.message);
+      setError("Error al conectar con el servidor");
     } finally {
       setLoading(false);
     }
   };
 
+  if (tokenValid === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center">
+          <p className="text-muted-foreground">Verificando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!tokenValid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="bg-card border border-border rounded-xl p-8 shadow-lg">
+            <h1 className="text-2xl font-bold text-foreground mb-4">
+              Enlace inválido
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              El enlace de recuperación ha expirado o no es válido.
+            </p>
+            <Link
+              href="/forgot-password"
+              className="text-primary hover:underline font-semibold"
+            >
+              Solicitar nuevo enlace
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary text-primary-foreground mb-4">
@@ -79,11 +131,9 @@ export default function RegisterPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            SkillPilot
+            Nueva Contraseña
           </h1>
-          <p className="text-muted-foreground">
-            Crea tu cuenta y comienza tu viaje
-          </p>
+          <p className="text-muted-foreground">Establece tu nueva contraseña</p>
         </div>
 
         <div className="bg-card border border-border rounded-xl p-8 shadow-lg">
@@ -96,60 +146,21 @@ export default function RegisterPage() {
 
             <div>
               <label
-                htmlFor="name"
-                className="block text-sm font-semibold text-foreground mb-2"
-              >
-                Nombre
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                placeholder="Tu nombre"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-semibold text-foreground mb-2"
-              >
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                placeholder="tu@email.com"
-              />
-            </div>
-
-            <div>
-              <label
                 htmlFor="password"
                 className="block text-sm font-semibold text-foreground mb-2"
               >
-                Contraseña
+                Nueva Contraseña
               </label>
               <div className="relative">
                 <input
                   id="password"
-                  name="password"
                   type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={handleChange}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   maxLength="20"
                   required
                   className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  placeholder="Ej: Pass123"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
@@ -157,13 +168,38 @@ export default function RegisterPage() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                      />
                     </svg>
                   ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
                     </svg>
                   )}
                 </button>
@@ -171,14 +207,33 @@ export default function RegisterPage() {
               <div className="mt-2 text-sm text-muted-foreground">
                 <p className="font-semibold mb-1">Requisitos:</p>
                 <ul className="space-y-1 text-xs">
-                  <li className={formData.password.length > 8 ? "text-green-600" : "text-red-600"}>
-                    {formData.password.length > 8 ? "✓" : "✗"} Más de 8 caracteres
+                  <li
+                    className={
+                      password.length > 8
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }
+                  >
+                    {password.length > 8
+                      ? "✓"
+                      : "✗"}{" "}
+                    Más de 8 caracteres
                   </li>
-                  <li className={/[A-Z]/.test(formData.password) ? "text-green-600" : "text-red-600"}>
-                    {/[A-Z]/.test(formData.password) ? "✓" : "✗"} Al menos una mayúscula (A-Z)
+                  <li
+                    className={
+                      /[A-Z]/.test(password) ? "text-green-600" : "text-red-600"
+                    }
+                  >
+                    {/[A-Z]/.test(password) ? "✓" : "✗"} Al menos una mayúscula
+                    (A-Z)
                   </li>
-                  <li className={/[0-9]/.test(formData.password) ? "text-green-600" : "text-red-600"}>
-                    {/[0-9]/.test(formData.password) ? "✓" : "✗"} Al menos un número (0-9)
+                  <li
+                    className={
+                      /[0-9]/.test(password) ? "text-green-600" : "text-red-600"
+                    }
+                  >
+                    {/[0-9]/.test(password) ? "✓" : "✗"} Al menos un número
+                    (0-9)
                   </li>
                 </ul>
               </div>
@@ -194,14 +249,13 @@ export default function RegisterPage() {
               <div className="relative">
                 <input
                   id="confirmPassword"
-                  name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   maxLength="20"
                   required
                   className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  placeholder="Repite tu contraseña"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
@@ -252,20 +306,17 @@ export default function RegisterPage() {
               disabled={loading}
               className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              {loading ? "Creando cuenta..." : "Crear cuenta"}
+              {loading ? "Cambiando contraseña..." : "Cambiar contraseña"}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              ¿Ya tienes una cuenta?{" "}
-              <Link
-                href="/login"
-                className="text-primary hover:underline font-semibold"
-              >
-                Inicia sesión aquí
-              </Link>
-            </p>
+            <Link
+              href="/login"
+              className="text-sm text-primary hover:underline font-medium"
+            >
+              Volver al login
+            </Link>
           </div>
         </div>
       </div>
