@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -209,15 +209,10 @@ export default function ResetPasswordPage() {
                 <ul className="space-y-1 text-xs">
                   <li
                     className={
-                      password.length > 8
-                        ? "text-green-600"
-                        : "text-red-600"
+                      password.length > 8 ? "text-green-600" : "text-red-600"
                     }
                   >
-                    {password.length > 8
-                      ? "✓"
-                      : "✗"}{" "}
-                    Más de 8 caracteres
+                    {password.length > 8 ? "✓" : "✗"} Más de 8 caracteres
                   </li>
                   <li
                     className={
@@ -321,5 +316,21 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
+          <div className="text-center">
+            <p className="text-muted-foreground">Verificando...</p>
+          </div>
+        </div>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
