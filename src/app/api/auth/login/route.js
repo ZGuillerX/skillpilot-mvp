@@ -14,6 +14,13 @@ export async function POST(request) {
             );
         }
 
+        if (password.length < 6 || password.length > 8) {
+            return NextResponse.json(
+                { error: 'La contraseña debe tener entre 6 y 8 caracteres' },
+                { status: 400 }
+            );
+        }
+
         // Buscar usuario
         const [users] = await pool.query(
             'SELECT id, email, password_hash, name, avatar_url, learning_goal, preferred_language FROM users WHERE email = ? AND is_active = true',

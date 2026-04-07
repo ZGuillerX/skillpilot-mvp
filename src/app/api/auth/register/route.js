@@ -21,7 +21,15 @@ export async function POST(request) {
         if (password.length < 6) {
             console.log(' Contraseña muy corta:', password.length);
             return NextResponse.json(
-                { error: 'La contraseña debe tener al menos 6 caracteres' },
+                { error: 'La contraseña debe tener entre 6 y 8 caracteres' },
+                { status: 400 }
+            );
+        }
+
+        if (password.length > 8) {
+            console.log(' Contraseña muy larga:', password.length);
+            return NextResponse.json(
+                { error: 'La contraseña no puede exceder 8 caracteres' },
                 { status: 400 }
             );
         }
