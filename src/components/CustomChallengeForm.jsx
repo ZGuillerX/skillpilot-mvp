@@ -12,24 +12,12 @@ export default function CustomChallengeForm({ onChallengeCreated }) {
   const [difficulty, setDifficulty] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const languages = [
-    "JavaScript",
-    "Python",
-    "Java",
-    "C++",
-    "TypeScript",
-    "SQL",
-    "HTML/CSS",
-    "React",
-    "Node.js",
-  ];
-
   const difficulties = ["beginner", "intermediate", "advanced"];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!idea.trim() || !language) {
+    if (!idea.trim() || !language.trim()) {
       toast.error("Por favor completa todos los campos");
       return;
     }
@@ -117,28 +105,19 @@ export default function CustomChallengeForm({ onChallengeCreated }) {
           </p>
         </div>
 
-        {/* Selecciona lenguaje */}
+        {/* Lenguaje libre */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
             Lenguaje de Programación *
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {languages.map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                onClick={() => setLanguage(lang)}
-                disabled={loading}
-                className={`py-2 px-3 rounded-lg font-medium transition-all ${
-                  language === lang
-                    ? "bg-violet-500 text-white border border-violet-500"
-                    : "bg-background border border-border hover:border-violet-500"
-                }`}
-              >
-                {lang}
-              </button>
-            ))}
-          </div>
+          <input
+            type="text"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            placeholder="Ej: Go, Rust, PHP, Kotlin, Swift, etc."
+            className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+            disabled={loading}
+          />
         </div>
 
         {/* Selecciona dificultad (opcional) */}
@@ -170,7 +149,7 @@ export default function CustomChallengeForm({ onChallengeCreated }) {
         {/* Botón submit */}
         <button
           type="submit"
-          disabled={loading || !idea.trim() || !language}
+          disabled={loading || !idea.trim() || !language.trim()}
           className="w-full py-3 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all"
         >
           {loading ? (

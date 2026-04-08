@@ -97,22 +97,73 @@ Basándote en esta información, genera un reto completo de programación.
             user: prompt,
         });
 
-        if (!result || !result.challenge) {
-            return NextResponse.json(
-                { error: "No se pudo generar el reto" },
-                { status: 500 }
-            );
-        }
+        const fallbackDifficulty =
+            difficulty && ["beginner", "intermediate", "advanced"].includes(difficulty)
+                ? difficulty
+                : "intermediate";
+
+        // Fallback para evitar 500 cuando el modelo responde malformado.
+        const fallbackChallenge = {
+            id: uuidv4(),
+            title: `Reto personalizado: ${idea.trim().slice(0, 40)}`,
+            description: `Implementa una solucion en ${language} basada en esta idea: ${idea.trim()}`,
+            language: language.trim(),
+            difficulty: fallbackDifficulty,
+            acceptanceCriteria: [
+                "La solucion debe resolver correctamente el problema principal.",
+                "El codigo debe estar estructurado y ser legible.",
+                "La salida debe coincidir con los casos esperados.",
+            ],
+            hints: [
+                "Divide el problema en pasos pequenos.",
+                "Valida casos borde antes del flujo principal.",
+                "Prueba con entradas simples y luego complejas.",
+            ],
+            exampleInput: "entrada de ejemplo",
+            exampleOutput: "salida esperada",
+            concepts: ["logica", "validacion", "estructuras de datos"],
+            estimatedTimeMinutes: fallbackDifficulty === "beginner" ? 20 : fallbackDifficulty === "advanced" ? 45 : 30,
+        };
+
+        const challenge = result?.challenge && typeof result.challenge === "object"
+            ? {
+                ...fallbackChallenge,
+                ...result.challenge,
+                language: result.challenge.language || language.trim(),
+                difficulty: ["beginner", "intermediate", "advanced"].includes(result.challenge.difficulty)
+                    ? result.challenge.difficulty
+                    : fallbackDifficulty,
+                acceptanceCriteria: Array.isArray(result.challenge.acceptanceCriteria) && result.challenge.acceptanceCriteria.length > 0
+                    ? result.challenge.acceptanceCriteria
+                    : fallbackChallenge.acceptanceCriteria,
+                hints: Array.isArray(result.challenge.hints) && result.challenge.hints.length > 0
+                    ? result.challenge.hints
+                    : fallbackChallenge.hints,
+                concepts: Array.isArray(result.challenge.concepts) && result.challenge.concepts.length > 0
+                    ? result.challenge.concepts
+                    : fallbackChallenge.concepts,
+            }
+            : fallbackChallenge;
 
         // Generar ID si no existe
-        const challenge = result.challenge;
         if (!challenge.id) {
             challenge.id = uuidv4();
         }
 
-        // Guardar en base de datos
-        const customChallengeId = uuidv4();
         const now = new Date();
+
+        // Mover retos activos anteriores al historial para que "Todos" muestre solo lo mas reciente.
+        await pool.query(
+            `
+            UPDATE custom_challenges
+            SET status = 'abandoned', completed_at = ?, updated_at = ?
+            WHERE user_id = ? AND status IN ('generated', 'in_progress')
+            `,
+            [now, now, decoded.userId]
+        );
+
+        // Guardar nuevo reto en base de datos
+        const customChallengeId = uuidv4();
 
         const query = `
       INSERT INTO custom_challenges 

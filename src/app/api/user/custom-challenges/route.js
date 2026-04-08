@@ -29,12 +29,16 @@ export async function GET(request) {
 
         // Filtrar por tipo
         if (type === "favorites") {
+            // Favoritos en cualquier estado
             query += ` AND is_favorite = true`;
             query += ` ORDER BY created_at DESC`;
         } else if (type === "history") {
+            // Historial solo retos finalizados
             query += ` AND status IN ('completed', 'abandoned')`;
-            query += ` ORDER BY completed_at DESC`;
+            query += ` ORDER BY completed_at DESC, updated_at DESC`;
         } else {
+            // Todos los retos activos (sin historial)
+            query += ` AND status IN ('generated', 'in_progress')`;
             query += ` ORDER BY created_at DESC`;
         }
 

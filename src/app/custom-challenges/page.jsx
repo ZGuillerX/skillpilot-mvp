@@ -15,8 +15,15 @@ function CustomChallengesContent() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
   const [challenges, setChallenges] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [maxResults, setMaxResults] = useState(5);
+  const [searchHistory, setSearchHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const searchStorageKey = user
+    ? `custom_challenges_search_history_${user.id}`
+    : null;
 
   useEffect(() => {
     if (authLoading) return; // Esperar a que se cargue la autenticación
@@ -27,6 +34,21 @@ function CustomChallengesContent() {
     }
     loadChallenges();
   }, [user, activeTab, authLoading]);
+
+  useEffect(() => {
+    if (!searchStorageKey) return;
+    try {
+      const saved = localStorage.getItem(searchStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setSearchHistory(parsed.slice(0, 10));
+        }
+      }
+    } catch (error) {
+      console.error("No se pudo cargar historial de búsqueda:", error);
+    }
+  }, [searchStorageKey]);
 
   const loadChallenges = async () => {
     try {
@@ -73,6 +95,36 @@ function CustomChallengesContent() {
     );
   };
 
+  const saveSearchHistory = (query) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    const updated = [
+      trimmed,
+      ...searchHistory.filter(
+        (item) => item.toLowerCase() !== trimmed.toLowerCase(),
+      ),
+    ].slice(0, 10);
+
+    setSearchHistory(updated);
+
+    if (searchStorageKey) {
+      localStorage.setItem(searchStorageKey, JSON.stringify(updated));
+    }
+  };
+
+  const clearSearchHistory = () => {
+    setSearchHistory([]);
+    if (searchStorageKey) {
+      localStorage.removeItem(searchStorageKey);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    saveSearchHistory(searchQuery);
+  };
+
   const tabs = [
     {
       id: "all",
@@ -96,6 +148,31 @@ function CustomChallengesContent() {
     favorites: "Retos guardados para retomarlos rapido",
     history: "Retos completados o abandonados",
   };
+
+  const isHistoryTab = activeTab === "history";
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+
+  const filteredChallenges = challenges.filter((challenge) => {
+    if (!normalizedSearch) return true;
+
+    const data = challenge.challenge_data || challenge;
+    const haystack = [
+      data.title,
+      data.description,
+      data.language,
+      ...(data.concepts || []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(normalizedSearch);
+  });
+
+  const displayedChallenges = isHistoryTab
+    ? filteredChallenges.slice(0, maxResults)
+    : challenges;
 
   return (
     <>
@@ -198,6 +275,79 @@ function CustomChallengesContent() {
                 ))}
               </div>
 
+              {/* Busqueda solo en historial */}
+              {isHistoryTab && (
+                <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+                  <div className="flex flex-col lg:flex-row gap-3">
+                    <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar por titulo, descripcion, lenguaje o concepto"
+                        className="flex-1 px-4 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <button
+                        type="submit"
+                        className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition"
+                      >
+                        Buscar
+                      </button>
+                    </form>
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-muted-foreground whitespace-nowrap">
+                        Max retos
+                      </label>
+                      <select
+                        value={maxResults}
+                        onChange={(e) => setMaxResults(Number(e.target.value))}
+                        className="px-3 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Historial de busqueda
+                      </h3>
+                      {searchHistory.length > 0 && (
+                        <button
+                          onClick={clearSearchHistory}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+                    {searchHistory.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Aun no hay busquedas guardadas.
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {searchHistory.map((item) => (
+                          <button
+                            key={item}
+                            onClick={() => setSearchQuery(item)}
+                            className="px-2.5 py-1 text-xs rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                          >
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Loading state */}
               {(loading || refreshing) && (
                 <div className="flex justify-center items-center py-12">
@@ -211,7 +361,7 @@ function CustomChallengesContent() {
               )}
 
               {/* Empty state */}
-              {!loading && !refreshing && challenges.length === 0 && (
+              {!loading && !refreshing && displayedChallenges.length === 0 && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -219,11 +369,14 @@ function CustomChallengesContent() {
                 >
                   <div className="text-5xl"></div>
                   <h3 className="text-lg font-semibold text-foreground">
+                    {isHistoryTab && normalizedSearch && "No se encontraron resultados"}
                     {activeTab === "all" && "No hay retos aún"}
                     {activeTab === "favorites" && "No hay favoritos"}
                     {activeTab === "history" && "No hay historial"}
                   </h3>
                   <p className="text-muted-foreground max-w-sm mx-auto">
+                    {isHistoryTab && normalizedSearch &&
+                      "Prueba con otra palabra o revisa tu historial de busqueda."}
                     {activeTab === "all" &&
                       "Comienza creando tu primer reto personalizado. ¡La IA lo generará para ti!"}
                     {activeTab === "favorites" &&
@@ -235,9 +388,9 @@ function CustomChallengesContent() {
               )}
 
               {/* Grid de retos */}
-              {!loading && !refreshing && challenges.length > 0 && (
+              {!loading && !refreshing && displayedChallenges.length > 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {challenges.map((challenge, idx) => (
+                  {displayedChallenges.map((challenge, idx) => (
                     <motion.div
                       key={challenge.id}
                       initial={{ opacity: 0, y: 20 }}

@@ -15,7 +15,7 @@ export async function GET(request, { params }) {
         }
 
         const decoded = await verifyToken(token);
-        const { id } = params;
+        const { id } = await params;
 
         const query = `
       SELECT id, challenge_data, status, is_favorite, attempts_count, best_score, created_at, completed_at
@@ -62,7 +62,7 @@ export async function PUT(request, { params }) {
         }
 
         const decoded = await verifyToken(token);
-        const { id } = params;
+        const { id } = await params;
         const { status, isFavorite, score } = await request.json();
 
         // Validar que el reto pertenece al usuario
@@ -138,9 +138,9 @@ export async function DELETE(request, { params }) {
         }
 
         const decoded = await verifyToken(token);
-        const { id } = params;
+        const { id } = await params;
 
-        const [rows, result] = await pool.query(
+        const [result] = await pool.query(
             "DELETE FROM custom_challenges WHERE id = ? AND user_id = ?",
             [id, decoded.userId]
         );
