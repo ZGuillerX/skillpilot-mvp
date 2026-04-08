@@ -36,24 +36,51 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-gradient-to-r from-primary/20 to-purple-600/20 rounded-full blur-3xl animate-float" />
+        <div
+          className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gradient-to-r from-accent/20 to-cyan-600/20 rounded-full blur-3xl animate-float"
+          style={{ animationDelay: "-2s" }}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
+      </div>
+
+      <div className="relative w-full max-w-md animate-fade-in-up">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary text-primary-foreground mb-4">
-            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary via-accent to-secondary mb-6 shadow-lg animate-pulse-glow">
+            <svg
+              className="w-10 h-10 text-white"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            SkillPilot
+          <h1 className="text-4xl font-black text-foreground mb-2">
+            <span className="text-gradient">SkillPilot</span>
           </h1>
-          <p className="text-muted-foreground">Inicia sesión en tu cuenta</p>
+          <p className="text-muted-foreground text-lg">Bienvenido de nuevo</p>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-8 shadow-lg">
+        <div className="card-premium p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-3 animate-shake">
+                <svg
+                  className="w-5 h-5 flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
                 {error}
               </div>
             )}
@@ -71,7 +98,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                className="input-premium w-full"
                 placeholder="tu@email.com"
               />
             </div>
@@ -91,8 +118,8 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   maxLength="20"
                   required
-                  className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  placeholder="••••••••"
+                  className="input-premium w-full pr-12"
+                  placeholder="Tu contraseña"
                 />
                 <button
                   type="button"
@@ -150,24 +177,50 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="btn-primary w-full py-4 text-base"
             >
-              {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Iniciando sesion...
+                </>
+              ) : (
+                <>
+                  Iniciar Sesion
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    />
+                  </svg>
+                </>
+              )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-8 pt-6 border-t border-border/50 text-center">
             <p className="text-sm text-muted-foreground">
               ¿No tienes una cuenta?{" "}
               <Link
                 href="/register"
-                className="text-primary hover:underline font-semibold"
+                className="text-primary hover:text-primary/80 font-semibold transition-colors"
               >
-                Regístrate aquí
+                Registrate gratis
               </Link>
             </p>
           </div>
         </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          Al continuar, aceptas nuestros terminos de servicio.
+        </p>
       </div>
     </div>
   );

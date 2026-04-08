@@ -119,9 +119,31 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground mt-4">Cargando perfil...</p>
+        <div className="text-center animate-fade-in-up">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-4 animate-pulse-glow">
+            <svg
+              className="w-8 h-8 text-white animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          </div>
+          <p className="text-muted-foreground font-medium">
+            Cargando tu perfil...
+          </p>
         </div>
       </div>
     );
@@ -156,27 +178,60 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
+      {/* Background decorations */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-accent/10 to-transparent rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative max-w-5xl mx-auto space-y-8">
         {/* Header */}
-        <div className="bg-card border border-border rounded-xl p-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-3xl font-bold">
-                {user?.name?.charAt(0).toUpperCase()}
+        <div className="card-premium p-8 animate-fade-in-up">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary via-accent to-secondary flex items-center justify-center text-white text-4xl font-black shadow-lg">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-4 border-card flex items-center justify-center">
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">
+                <h1 className="text-3xl font-black text-foreground mb-1">
                   {user?.name}
                 </h1>
-                <p className="text-muted-foreground">{user?.email}</p>
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  {user?.email}
+                </p>
               </div>
             </div>
 
-            {/* Botón de Estadísticas y Logros */}
-            <a
-              href="/stats"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl"
-            >
+            {/* Boton de Estadisticas y Logros */}
+            <a href="/stats" className="btn-primary px-6 py-3 group">
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -190,18 +245,34 @@ export default function ProfilePage() {
                   d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                 />
               </svg>
-              Ver Estadísticas y Logros
+              Ver Logros
+              <svg
+                className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
             </a>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+        <div
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up"
+          style={{ animationDelay: "0.1s" }}
+        >
+          <div className="card-premium p-6 group hover:border-primary/30">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg
-                  className="w-6 h-6 text-primary"
+                  className="w-7 h-7 text-primary"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -215,21 +286,21 @@ export default function ProfilePage() {
                 </svg>
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-3xl font-black text-gradient">
                   {completedChallenges}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground font-medium">
                   Retos completados
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
+          <div className="card-premium p-6 group hover:border-accent/30">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg
-                  className="w-6 h-6 text-secondary"
+                  className="w-7 h-7 text-accent"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -243,21 +314,21 @@ export default function ProfilePage() {
                 </svg>
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-3xl font-black text-accent">
                   {plans.length}/5
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground font-medium">
                   Planes guardados
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
+          <div className="card-premium p-6 group hover:border-emerald-500/30">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg
-                  className="w-6 h-6 text-green-600 dark:text-green-400"
+                  className="w-7 h-7 text-emerald-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -271,10 +342,12 @@ export default function ProfilePage() {
                 </svg>
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-3xl font-black text-emerald-500">
                   {averageScore}%
                 </p>
-                <p className="text-sm text-muted-foreground">Score promedio</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Score promedio
+                </p>
               </div>
             </div>
           </div>

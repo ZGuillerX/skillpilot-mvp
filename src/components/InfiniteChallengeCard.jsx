@@ -463,35 +463,50 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
 
   if (!learningPlan) {
     return (
-      <div className="bg-card border border-border rounded-xl p-8 text-center">
-        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg
-            className="w-8 h-8 text-muted-foreground"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="card-premium p-12 text-center max-w-md w-full animate-fade-in-up">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-6 animate-pulse-glow">
+            <svg
+              className="w-10 h-10 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-black text-foreground mb-3">
+            Sin Plan de Aprendizaje
+          </h3>
+          <p className="text-muted-foreground mb-6 leading-relaxed">
+            Crea tu plan personalizado para desbloquear retos infinitos
+            adaptados a tu nivel.
+          </p>
+          <a
+            href="/onboarding"
+            className="btn-primary text-base px-8 py-3 inline-flex"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-            />
-          </svg>
+            Crear Mi Plan
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              />
+            </svg>
+          </a>
         </div>
-        <h3 className="text-lg font-semibold text-card-foreground mb-2">
-          Sin Plan de Aprendizaje
-        </h3>
-        <p className="text-muted-foreground mb-4">
-          Necesitas generar un plan de aprendizaje primero para acceder a los
-          retos infinitos.
-        </p>
-        <a
-          href="/onboarding"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          Crear Plan de Aprendizaje
-        </a>
       </div>
     );
   }
@@ -499,30 +514,37 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-background">
       {/* ── Header Superior ────────────────────────────────────────────────── */}
-      <section className="flex-shrink-0 flex flex-col gap-2 px-6 py-2 border-b border-border bg-white/90 dark:bg-[#16161a]/90 shadow-sm">
+      <section className="flex-shrink-0 flex flex-col gap-2 px-6 py-3 border-b border-border/50 glass">
         <div className="flex items-start justify-between gap-8">
           <div className="flex-1">
-            <h1 className="text-2xl font-extrabold text-foreground mb-0.5">
-              Retos Infinitos
-            </h1>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl font-black text-gradient">
+                Retos Infinitos
+              </h1>
+              <span
+                className={`badge-${learningMode === "arena" ? "secondary" : "primary"} text-[10px]`}
+              >
+                {learningMode === "arena" ? "Arena" : "Tutor"}
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground">
               {learningPlan?.goal} • {learningPlan?.language}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Modo {learningMode === "arena" ? "Arena" : "Tutor"} • Cuello de
-              botella: {bottleneckCapability}
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse"></span>
+              Enfoque: {bottleneckCapability}
             </p>
           </div>
-          <div className="flex gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-black text-primary mb-0">
+          <div className="flex gap-4">
+            <div className="glass rounded-xl px-4 py-2 text-center min-w-[80px] border border-primary/20">
+              <div className="text-2xl font-black text-gradient mb-0">
                 {stats.completed}
               </div>
               <div className="text-[10px] text-muted-foreground font-semibold">
                 Completados
               </div>
             </div>
-            <div className="text-center">
+            <div className="glass rounded-xl px-4 py-2 text-center min-w-[80px] border border-yellow-500/20">
               <div className="text-2xl font-black text-yellow-500 mb-0">
                 {stats.averageScore}%
               </div>
@@ -530,8 +552,8 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
                 Promedio
               </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-black text-green-500 mb-0">
+            <div className="glass rounded-xl px-4 py-2 text-center min-w-[80px] border border-emerald-500/20">
+              <div className="text-2xl font-black text-emerald-500 mb-0">
                 {stats.totalAttempts}
               </div>
               <div className="text-[10px] text-muted-foreground font-semibold">
@@ -541,12 +563,12 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-6 pt-1.5 border-t border-border">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-6 pt-2 border-t border-border/30">
+          <div className="flex items-center gap-3">
             <button
               onClick={handlePrevious}
               disabled={currentIndex === 0 || isLoading}
-              className="px-3 py-1.5 rounded-lg bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-105 flex items-center gap-1"
+              className="btn-ghost px-3 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <svg
                 className="w-4 h-4"
@@ -564,35 +586,41 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
               Anterior
             </button>
 
-            <div className="px-4 py-1 bg-muted rounded-lg">
-              <div className="text-base font-black text-foreground">
+            <div className="glass px-5 py-2 rounded-xl border border-primary/20">
+              <div className="text-base font-black text-gradient">
                 Reto #{currentIndex + 1}
               </div>
               {challenge && (
-                <div className="flex items-center gap-2 mt-0">
+                <div className="flex items-center gap-2 mt-0.5">
                   <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${getDifficultyColor(challenge.difficulty)}`}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getDifficultyColor(challenge.difficulty)}`}
                   >
                     {challenge.difficulty}
                   </span>
                   {isCompleted && (
-                    <svg
-                      className="w-5 h-5 text-green-500"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-                    </svg>
+                    <div className="flex items-center gap-1 text-emerald-500">
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                      </svg>
+                      <span className="text-[10px] font-bold">Completado</span>
+                    </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Cronómetro */}
-            <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            {/* Cronometro */}
+            <div className="glass px-4 py-2 rounded-xl border border-cyan-500/30">
               <div className="flex items-center gap-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${timerRunning ? "bg-cyan-500 animate-pulse" : "bg-gray-500"}`}
+                ></div>
                 <svg
-                  className="w-4 h-4 text-blue-500"
+                  className="w-4 h-4 text-cyan-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -605,7 +633,7 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
                   />
                 </svg>
                 <span
-                  className={`text-sm font-bold ${timerRunning ? "text-blue-500" : "text-gray-500"}`}
+                  className={`text-sm font-bold font-mono ${timerRunning ? "text-cyan-400" : "text-gray-500"}`}
                 >
                   {formatTime(timer)}
                 </span>
@@ -614,10 +642,10 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
 
             {/* Indicador de archivos */}
             {files.length > 0 && (
-              <div className="px-3 py-1 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+              <div className="glass px-3 py-2 rounded-xl border border-purple-500/30">
                 <div className="flex items-center gap-1.5">
                   <svg
-                    className="w-3.5 h-3.5 text-purple-400"
+                    className="w-4 h-4 text-purple-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -629,7 +657,7 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  <span className="text-xs font-semibold text-purple-400">
+                  <span className="text-xs font-bold text-purple-400">
                     {files.length} archivo{files.length !== 1 ? "s" : ""}
                   </span>
                 </div>
@@ -639,7 +667,7 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
             <button
               onClick={handleNext}
               disabled={isLoading}
-              className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-105 flex items-center gap-1"
+              className="btn-primary px-4 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Siguiente
               <svg
@@ -659,16 +687,26 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
           </div>
 
           <div className="text-right">
-            <p className="text-[10px] text-muted-foreground mb-0.5">
+            <p className="text-[10px] text-muted-foreground mb-1 flex items-center justify-end gap-1">
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
               {challenge?.estimatedTimeMinutes} min estimado
             </p>
             {challenge?.concepts && (
               <div className="flex gap-1.5 flex-wrap justify-end">
-                {challenge.concepts.slice(0, 2).map((concept, i) => (
-                  <span
-                    key={i}
-                    className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded"
-                  >
+                {challenge.concepts.slice(0, 3).map((concept, i) => (
+                  <span key={i} className="badge-primary text-[9px]">
                     {concept}
                   </span>
                 ))}
@@ -683,31 +721,58 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
         {challenge && (
           <>
             {!leftPanelCollapsed && (
-              <section className="w-[420px] h-full border-r border-border bg-white dark:bg-[#0f0f0f] flex flex-col">
-                <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 pb-3 border-b border-border">
-                  <div>
-                    <h2 className="text-base font-bold text-foreground">
+              <section className="w-[420px] h-full border-r border-border/50 bg-card/50 backdrop-blur-sm flex flex-col">
+                <div className="flex-shrink-0 flex items-center justify-between px-4 py-4 border-b border-border/30">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-black text-foreground leading-tight mb-2">
                       {challenge.title}
                     </h2>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="px-2 py-0.5 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`badge-${challenge.difficulty === "beginner" ? "success" : challenge.difficulty === "intermediate" ? "warning" : "danger"} text-[10px]`}
+                      >
                         {challenge.difficulty}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
                         {challenge.estimatedTimeMinutes} min
                       </span>
                     </div>
                   </div>
                   <button
                     onClick={() => setLeftPanelCollapsed(true)}
-                    className="p-1.5 hover:bg-muted rounded transition"
+                    className="p-2 hover:bg-muted rounded-lg transition-all hover:scale-110 text-muted-foreground hover:text-foreground"
                     title="Expandir editor"
                   >
-                    ◀
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                      />
+                    </svg>
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 scrollbar-thin">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-3">
                   <div className="flex flex-col gap-3">
                     {/* Descripción */}
                     <section className="rounded-lg border border-border overflow-hidden bg-white dark:bg-[#1a1a1a]">
@@ -947,10 +1012,22 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
             {leftPanelCollapsed && (
               <button
                 onClick={() => setLeftPanelCollapsed(false)}
-                className="w-8 flex-shrink-0 bg-white dark:bg-[#1a1a1a] border-r border-border hover:bg-muted transition flex items-center justify-center"
-                title="Mostrar descripción"
+                className="w-10 flex-shrink-0 glass border-r border-border/50 hover:bg-primary/10 transition-all flex items-center justify-center group"
+                title="Mostrar descripcion"
               >
-                ▶
+                <svg
+                  className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                  />
+                </svg>
               </button>
             )}
           </>
@@ -958,17 +1035,22 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
 
         {/* ── Right Panel - Multi-file Editor ──────────────────────────────── */}
         {challenge && (
-          <section className="flex-1 h-full overflow-hidden flex flex-col bg-[#1e1e1e]">
+          <section className="flex-1 h-full overflow-hidden flex flex-col bg-[#0d1117]">
             {/* Editor Header */}
-            <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 bg-[#2d2d2d] border-b border-[#3e3e3e]">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-semibold">
+            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 glass border-b border-border/30">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <span className="text-xs text-muted-foreground font-mono font-semibold">
                   {challenge.language}
                 </span>
                 {isGeneratingFiles && (
-                  <span className="text-xs text-purple-400 flex items-center gap-1">
-                    <div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin" />
-                    generando archivos...
+                  <span className="text-xs text-purple-400 flex items-center gap-2 animate-pulse">
+                    <div className="w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                    Generando archivos...
                   </span>
                 )}
               </div>
@@ -976,13 +1058,29 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
                 <button
                   type="button"
                   onClick={() => setShowThemeSelector((v) => !v)}
-                  className="px-2 py-1 text-xs rounded hover:bg-[#3e3e3e] text-gray-300 flex items-center gap-1"
+                  className="btn-ghost px-3 py-1.5 text-xs flex items-center gap-2"
                 >
-                  🎨 Tema
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+                    />
+                  </svg>
+                  Tema
                 </button>
                 {showThemeSelector && (
-                  <div className="absolute right-0 top-full mt-1 bg-[#2d2d2d] border border-[#3e3e3e] rounded shadow-lg z-50 p-2 min-w-[150px]">
-                    <div className="flex flex-col gap-1">
+                  <div className="absolute right-0 top-full mt-2 glass border border-border/50 rounded-xl shadow-xl z-50 p-2 min-w-[180px] animate-fade-in-up">
+                    <p className="text-[10px] text-muted-foreground font-semibold px-2 py-1 mb-1">
+                      Seleccionar tema
+                    </p>
+                    <div className="flex flex-col gap-0.5">
                       {MONACO_THEMES.map((theme) => (
                         <button
                           key={theme.value}
@@ -990,8 +1088,12 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
                             setEditorTheme(theme.value);
                             setShowThemeSelector(false);
                           }}
-                          className={`px-2 py-1 text-xs rounded text-left hover:bg-[#3e3e3e] transition ${editorTheme === theme.value ? "bg-primary text-primary-foreground" : "text-gray-300"}`}
+                          className={`px-3 py-2 text-xs rounded-lg text-left transition-all flex items-center gap-2 ${editorTheme === theme.value ? "bg-primary/20 text-primary font-semibold" : "text-foreground/80 hover:bg-muted"}`}
                         >
+                          <span
+                            className="w-3 h-3 rounded-full border border-border"
+                            style={{ backgroundColor: theme.color }}
+                          ></span>
                           {theme.name}
                         </button>
                       ))}
@@ -1012,28 +1114,82 @@ export default function InfiniteChallengeCard({ learningMode = "tutor" }) {
             />
 
             {/* Action Buttons */}
-            <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-[#2d2d2d] border-t border-[#3e3e3e]">
+            <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 glass border-t border-border/30">
               <button
                 onClick={handleSubmitCode}
                 disabled={
                   isEvaluating || isGeneratingFiles || files.length === 0
                 }
-                className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="btn-primary px-6 py-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {isEvaluating ? "Evaluando..." : "Ejecutar"}
+                {isEvaluating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Evaluando...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Ejecutar
+                  </>
+                )}
               </button>
               {(evaluation ||
                 files.some((f) => f.content !== f.placeholder)) && (
                 <button
                   onClick={retryChallenge}
-                  className="px-4 py-1.5 rounded bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 transition"
+                  className="btn-ghost px-4 py-2 text-sm"
                 >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
                   Reintentar
                 </button>
               )}
-              {/* Info de archivos que se evaluarán */}
+              {/* Info de archivos que se evaluaran */}
               {files.length > 1 && (
-                <span className="text-xs text-gray-500 ml-auto">
+                <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
                   Evaluando {files.length} archivos
                 </span>
               )}
