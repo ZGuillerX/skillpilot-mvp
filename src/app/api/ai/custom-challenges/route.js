@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { askJSON } from "@/lib/ai/groq";
-import { verifyToken } from "@/lib/auth";
 import pool from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
+import { getAuthContext } from "@/lib/workspace";
+import { enforceWorkspaceQuota } from "@/lib/quota";
+import { logAuditEvent } from "@/lib/audit";
 
 const SYSTEM_CUSTOM_CHALLENGES = `
 Eres un generador experto de retos de programación personalizados para SkillPilot.
@@ -31,7 +33,13 @@ RESPONDE EXCLUSIVAMENTE EN JSON con esta estructura EXACTA:
     "exampleInput": "string (si aplica)",
     "exampleOutput": "string (si aplica)",
     "concepts": ["concepto1", "concepto2"],
-    "estimatedTimeMinutes": number
+        "estimatedTimeMinutes": number,
+        "capabilities": ["decomposicion", "depuracion"],
+        "projectTask": {
+            "week": 1,
+            "title": "string",
+            "objective": "string"
+        }
   }
 }
 
@@ -52,17 +60,30 @@ ESTILO:
 
 export async function POST(request) {
     try {
-        // Verificar autenticación
-        const token = request.headers.get('authorization')?.replace('Bearer ', '');
-
-        if (!token) {
+        const auth = await getAuthContext(request);
+        if (auth.error) {
             return NextResponse.json(
-                { error: 'Token no proporcionado' },
-                { status: 401 }
+                { error: auth.error },
+                { status: auth.status || 401 }
             );
         }
 
-        const decoded = await verifyToken(token);
+        const quota = await enforceWorkspaceQuota({
+            workspaceId: auth.workspaceId,
+            metric: "custom_challenge_generate",
+            increment: 1,
+        });
+
+        if (!quota.allowed) {
+            return NextResponse.json(
+                {
+                    error: "Limite diario alcanzado para retos personalizados",
+                    quota,
+                },
+                { status: 429 }
+            );
+        }
+
         const { idea, language, difficulty } = await request.json();
 
         // Validar entrada
@@ -123,6 +144,12 @@ Basándote en esta información, genera un reto completo de programación.
             exampleOutput: "salida esperada",
             concepts: ["logica", "validacion", "estructuras de datos"],
             estimatedTimeMinutes: fallbackDifficulty === "beginner" ? 20 : fallbackDifficulty === "advanced" ? 45 : 30,
+            capabilities: ["decomposicion", "depuracion"],
+            projectTask: {
+                week: 1,
+                title: "Proyecto vivo inicial",
+                objective: "Integra este reto en un mini proyecto que crezca con cada nuevo reto.",
+            },
         };
 
         const challenge = result?.challenge && typeof result.challenge === "object"
@@ -142,6 +169,12 @@ Basándote en esta información, genera un reto completo de programación.
                 concepts: Array.isArray(result.challenge.concepts) && result.challenge.concepts.length > 0
                     ? result.challenge.concepts
                     : fallbackChallenge.concepts,
+                capabilities: Array.isArray(result.challenge.capabilities) && result.challenge.capabilities.length > 0
+                    ? result.challenge.capabilities.slice(0, 2)
+                    : fallbackChallenge.capabilities,
+                projectTask: result.challenge.projectTask && typeof result.challenge.projectTask === "object"
+                    ? result.challenge.projectTask
+                    : fallbackChallenge.projectTask,
             }
             : fallbackChallenge;
 
@@ -159,7 +192,7 @@ Basándote en esta información, genera un reto completo de programación.
             SET status = 'abandoned', completed_at = ?, updated_at = ?
             WHERE user_id = ? AND status IN ('generated', 'in_progress')
             `,
-            [now, now, decoded.userId]
+            [now, now, auth.userId]
         );
 
         // Guardar nuevo reto en base de datos
@@ -173,16 +206,33 @@ Basándote en esta información, genera un reto completo de programación.
 
         await pool.query(query, [
             customChallengeId,
-            decoded.userId,
+            auth.userId,
             JSON.stringify(challenge),
             now,
             now,
         ]);
 
+        await logAuditEvent({
+            workspaceId: auth.workspaceId,
+            userId: auth.userId,
+            action: "ai.custom_challenge.generate",
+            targetType: "custom_challenge",
+            targetId: customChallengeId,
+            status: "success",
+            metadata: {
+                language,
+                difficulty: challenge.difficulty,
+                quotaRemaining: quota.remaining,
+            },
+            ipAddress: auth.requestMeta.ipAddress,
+            userAgent: auth.requestMeta.userAgent,
+        });
+
         return NextResponse.json({
             success: true,
             customChallengeId,
             challenge,
+            quota,
         });
     } catch (error) {
         console.error("Error generando reto personalizado:", error);

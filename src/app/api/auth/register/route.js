@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { hashPassword, generateToken, generateId, getTokenExpiration } from '@/lib/auth';
+import { logAuditEvent } from '@/lib/audit';
+
+function shouldAutoCreateWorkspace() {
+    const value = String(process.env.AUTO_CREATE_WORKSPACE_ON_REGISTER || '').toLowerCase();
+    return value === '1' || value === 'true' || value === 'yes';
+}
+
+function slugifyWorkspace(name) {
+    const base = String(name || 'workspace')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+        .slice(0, 40) || 'workspace';
+
+    return `${base}-${Date.now().toString().slice(-6)}`;
+}
 
 export async function POST(request) {
     try {
@@ -86,8 +102,37 @@ export async function POST(request) {
             [userId, email, passwordHash, name]
         );
 
+        let workspaceId = null;
+        let workspaceRole = 'member';
+
+        if (shouldAutoCreateWorkspace()) {
+            try {
+                workspaceId = generateId();
+                const workspaceSlug = slugifyWorkspace(`${name}-workspace`);
+                const membershipId = generateId();
+
+                await pool.query(
+                    'INSERT INTO workspaces (id, name, slug, owner_user_id, plan_tier) VALUES (?, ?, ?, ?, ?)',
+                    [workspaceId, `${name}'s Workspace`, workspaceSlug, userId, 'free']
+                );
+
+                await pool.query(
+                    'INSERT INTO workspace_members (id, workspace_id, user_id, role, status) VALUES (?, ?, ?, ?, ?)',
+                    [membershipId, workspaceId, userId, workspaceRole, 'active']
+                );
+
+                await pool.query(
+                    'UPDATE users SET current_workspace_id = ? WHERE id = ?',
+                    [workspaceId, userId]
+                );
+            } catch (workspaceError) {
+                console.warn('No se pudo crear workspace por defecto:', workspaceError?.message || workspaceError);
+                workspaceId = null;
+            }
+        }
+
         // Crear sesión
-        const token = generateToken(userId, email);
+        const token = generateToken(userId, email, workspaceId, workspaceRole);
         const sessionId = generateId();
         const expiresAt = getTokenExpiration();
 
@@ -103,12 +148,26 @@ export async function POST(request) {
             [progressId, userId]
         );
 
+        await logAuditEvent({
+            workspaceId,
+            userId,
+            action: 'auth.register',
+            targetType: 'user',
+            targetId: userId,
+            status: 'success',
+            metadata: { email },
+            ipAddress: request.headers.get('x-forwarded-for')?.split(',')?.[0]?.trim() || null,
+            userAgent: request.headers.get('user-agent') || null,
+        });
+
         return NextResponse.json({
             success: true,
             user: {
                 id: userId,
                 email,
                 name,
+                workspaceId,
+                role: workspaceRole,
             },
             token,
         });

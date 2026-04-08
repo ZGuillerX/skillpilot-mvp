@@ -275,9 +275,7 @@ export default function CustomChallengeCard({
           <button
             onClick={handleToggleFavorite}
             disabled={isUpdating}
-            className={`flex items-center justify-center gap-2 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 ${
-                "col-span-2"
-              } ${
+            className={`flex items-center justify-center gap-2 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 ${"col-span-2"} ${
               challenge.is_favorite
                 ? "bg-amber-500/20 hover:bg-amber-500/30 text-amber-400"
                 : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"

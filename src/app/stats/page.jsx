@@ -3,6 +3,10 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { getUserProgress } from "@/lib/userProgress";
+import {
+  getAdaptiveMemory,
+  getBottleneckCapability,
+} from "@/lib/challengeManager";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import AchievementsGrid from "@/components/Achievements";
@@ -17,7 +21,9 @@ export default function StatsPage() {
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState("analytics"); // analytics | achievements
+  const [activeTab, setActiveTab] = useState("analytics"); // analytics | achievements | capabilities
+  const [adaptiveMemory, setAdaptiveMemory] = useState(null);
+  const [bottleneck, setBottleneck] = useState("decomposicion");
 
   useEffect(() => {
     // Esperar a que termine de verificar autenticación
@@ -58,6 +64,10 @@ export default function StatsPage() {
       if (!silent) setLoading(true);
       const data = await getUserProgress();
       setProgress(data);
+      const memory = await getAdaptiveMemory();
+      setAdaptiveMemory(memory);
+      const bottleneckCapability = await getBottleneckCapability();
+      setBottleneck(bottleneckCapability);
     } catch (error) {
       console.error("Error loading progress:", error);
       if (!silent) toast.error("Error al cargar las estadísticas");
@@ -92,12 +102,12 @@ export default function StatsPage() {
   const currentPlan = progress?.learning_plan?.currentPlan;
   const history = currentPlan
     ? progress?.challenge_history?.filter(
-        (entry) => entry.planId === currentPlan.id
+        (entry) => entry.planId === currentPlan.id,
       ) || []
     : [];
 
   const completedChallenges = history.filter(
-    (entry) => entry.evaluation?.success
+    (entry) => entry.evaluation?.success,
   ).length;
 
   const scores = history
@@ -107,7 +117,7 @@ export default function StatsPage() {
   const averageScore =
     scores.length > 0
       ? Math.round(
-          scores.reduce((sum, score) => sum + score, 0) / scores.length
+          scores.reduce((sum, score) => sum + score, 0) / scores.length,
         )
       : 0;
 
@@ -194,6 +204,17 @@ export default function StatsPage() {
                   <TrophyIcon className="w-4 h-4" />
                   Logros
                 </button>
+                <button
+                  onClick={() => setActiveTab("capabilities")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-colors ${
+                    activeTab === "capabilities"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ChartIcon className="w-4 h-4" />
+                  Capacidades
+                </button>
               </div>
             </div>
           </FadeIn>
@@ -234,6 +255,12 @@ export default function StatsPage() {
             <div>
               {activeTab === "analytics" ? (
                 <AnalyticsDashboard stats={stats} history={history} />
+              ) : activeTab === "capabilities" ? (
+                <CapabilitiesPanel
+                  adaptiveMemory={adaptiveMemory}
+                  bottleneck={bottleneck}
+                  history={history}
+                />
               ) : (
                 <AchievementsGrid stats={stats} history={history} />
               )}
@@ -242,5 +269,128 @@ export default function StatsPage() {
         </div>
       </div>
     </ErrorBoundary>
+  );
+}
+
+function getWeekKey(dateValue) {
+  const d = new Date(dateValue || Date.now());
+  const start = new Date(Date.UTC(d.getFullYear(), 0, 1));
+  const dayMs = 24 * 60 * 60 * 1000;
+  const week = Math.ceil(((d - start) / dayMs + start.getUTCDay() + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function buildCapabilityWeeklyEvolution(history = []) {
+  const buckets = {};
+  history.forEach((entry) => {
+    const dims = entry?.evaluation?.dimensions;
+    if (!dims || typeof dims !== "object") return;
+    const week = getWeekKey(entry.completedAt || entry.savedAt);
+    if (!buckets[week]) buckets[week] = { sum: {}, count: {} };
+    Object.entries(dims).forEach(([k, v]) => {
+      if (typeof v !== "number") return;
+      buckets[week].sum[k] = (buckets[week].sum[k] || 0) + v;
+      buckets[week].count[k] = (buckets[week].count[k] || 0) + 1;
+    });
+  });
+
+  return Object.entries(buckets)
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([week, data]) => {
+      const averages = {};
+      Object.keys(data.sum).forEach((k) => {
+        averages[k] = Math.round(data.sum[k] / data.count[k]);
+      });
+      return { week, averages };
+    })
+    .slice(-8);
+}
+
+function CapabilitiesPanel({ adaptiveMemory, bottleneck, history }) {
+  const scores = adaptiveMemory?.capabilityScores || {};
+  const evolution = buildCapabilityWeeklyEvolution(history);
+  const capabilities = Object.entries(scores);
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-card border border-border rounded-xl p-6">
+        <h3 className="text-xl font-bold text-foreground mb-2">
+          Mapa de capacidades
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Tu cuello de botella actual es{" "}
+          <span className="font-semibold text-primary">{bottleneck}</span>.
+        </p>
+        <div className="space-y-3">
+          {capabilities.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Aun no hay datos de capacidades.
+            </p>
+          )}
+          {capabilities.map(([name, value]) => (
+            <div key={name}>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="capitalize text-foreground">
+                  {name.replace(/_/g, " ")}
+                </span>
+                <span className="text-muted-foreground font-semibold">
+                  {value}
+                </span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full"
+                  style={{
+                    width: `${Math.max(0, Math.min(100, value || 0))}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-6">
+        <h3 className="text-xl font-bold text-foreground mb-2">
+          Evolucion semanal
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Promedio semanal por capacidad (ultimas 8 semanas con actividad).
+        </p>
+        {evolution.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Aun no hay suficientes evaluaciones para mostrar evolucion.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {evolution.map((row) => (
+              <div
+                key={row.week}
+                className="border border-border rounded-lg p-3"
+              >
+                <p className="text-xs font-semibold text-muted-foreground mb-2">
+                  {row.week}
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {Object.entries(row.averages)
+                    .slice(0, 6)
+                    .map(([k, v]) => (
+                      <div
+                        key={k}
+                        className="text-xs flex items-center justify-between bg-muted/60 rounded px-2 py-1"
+                      >
+                        <span className="capitalize text-foreground">
+                          {k.replace(/_/g, " ")}
+                        </span>
+                        <span className="font-semibold text-primary">{v}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

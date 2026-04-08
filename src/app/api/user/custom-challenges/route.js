@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
 import pool from "@/lib/db";
+import { getAuthContext } from "@/lib/workspace";
 
 export async function GET(request) {
     try {
-        const token = request.headers.get('authorization')?.replace('Bearer ', '');
-
-        if (!token) {
+        const auth = await getAuthContext(request);
+        if (auth.error) {
             return NextResponse.json(
-                { error: 'Token no proporcionado' },
-                { status: 401 }
+                { error: auth.error },
+                { status: auth.status || 401 }
             );
         }
-
-        const decoded = await verifyToken(token);
 
         // Obtener parámetro type de la URL
         const { searchParams } = new URL(request.url);
@@ -25,7 +22,7 @@ export async function GET(request) {
       WHERE user_id = ?
     `;
 
-        const queryParams = [decoded.userId];
+        const queryParams = [auth.userId];
 
         // Filtrar por tipo
         if (type === "favorites") {

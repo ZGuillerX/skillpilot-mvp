@@ -279,7 +279,10 @@ function CustomChallengesContent() {
               {isHistoryTab && (
                 <div className="bg-card border border-border rounded-xl p-4 space-y-4">
                   <div className="flex flex-col lg:flex-row gap-3">
-                    <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
+                    <form
+                      onSubmit={handleSearchSubmit}
+                      className="flex-1 flex gap-2"
+                    >
                       <input
                         type="text"
                         value={searchQuery}
@@ -369,13 +372,16 @@ function CustomChallengesContent() {
                 >
                   <div className="text-5xl"></div>
                   <h3 className="text-lg font-semibold text-foreground">
-                    {isHistoryTab && normalizedSearch && "No se encontraron resultados"}
+                    {isHistoryTab &&
+                      normalizedSearch &&
+                      "No se encontraron resultados"}
                     {activeTab === "all" && "No hay retos aún"}
                     {activeTab === "favorites" && "No hay favoritos"}
                     {activeTab === "history" && "No hay historial"}
                   </h3>
                   <p className="text-muted-foreground max-w-sm mx-auto">
-                    {isHistoryTab && normalizedSearch &&
+                    {isHistoryTab &&
+                      normalizedSearch &&
                       "Prueba con otra palabra o revisa tu historial de busqueda."}
                     {activeTab === "all" &&
                       "Comienza creando tu primer reto personalizado. ¡La IA lo generará para ti!"}

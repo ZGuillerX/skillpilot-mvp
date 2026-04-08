@@ -61,7 +61,7 @@ export default function ProfilePage() {
   const handleClearPlans = async () => {
     if (
       !confirm(
-        "¿Estás seguro? Esto eliminará todos tus planes y progreso de retos."
+        "¿Estás seguro? Esto eliminará todos tus planes y progreso de retos.",
       )
     ) {
       return;
@@ -85,7 +85,7 @@ export default function ProfilePage() {
       await switchPlan(planId);
       await loadProgress();
       toast.success(
-        "Plan cambiado exitosamente. Ve a Retos Infinitos para continuar."
+        "Plan cambiado exitosamente. Ve a Retos Infinitos para continuar.",
       );
       router.push("/challenges");
     } catch (error) {
@@ -98,7 +98,7 @@ export default function ProfilePage() {
   const handleDeletePlan = async (planId, planName) => {
     if (
       !confirm(
-        `¿Estás seguro de eliminar el plan "${planName}"? Esto también eliminará todos los retos asociados.`
+        `¿Estás seguro de eliminar el plan "${planName}"? Esto también eliminará todos los retos asociados.`,
       )
     ) {
       return;
@@ -133,12 +133,12 @@ export default function ProfilePage() {
   // Calcular estadísticas solo del plan activo
   const currentPlanChallenges = currentPlan
     ? progress?.challenge_history?.filter(
-        (entry) => entry.planId === currentPlan.id
+        (entry) => entry.planId === currentPlan.id,
       ) || []
     : [];
 
   const completedChallenges = currentPlanChallenges.filter(
-    (entry) => entry.evaluation?.success
+    (entry) => entry.evaluation?.success,
   ).length;
 
   const totalChallenges = currentPlanChallenges.length;
@@ -150,7 +150,7 @@ export default function ProfilePage() {
   const averageScore =
     scores.length > 0
       ? Math.round(
-          scores.reduce((sum, score) => sum + score, 0) / scores.length
+          scores.reduce((sum, score) => sum + score, 0) / scores.length,
         )
       : 0;
 
@@ -327,10 +327,10 @@ export default function ProfilePage() {
               {plans.map((plan, index) => {
                 const planChallenges =
                   progress?.challenge_history?.filter(
-                    (entry) => entry.planId === plan.id
+                    (entry) => entry.planId === plan.id,
                   ) || [];
                 const completedCount = planChallenges.filter(
-                  (entry) => entry.evaluation?.success
+                  (entry) => entry.evaluation?.success,
                 ).length;
 
                 return (
@@ -376,7 +376,7 @@ export default function ProfilePage() {
                                 day: "numeric",
                                 month: "short",
                                 year: "numeric",
-                              }
+                              },
                             )}
                           </span>
                           <span>•</span>

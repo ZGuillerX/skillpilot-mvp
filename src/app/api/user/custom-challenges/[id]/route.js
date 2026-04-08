@@ -1,20 +1,18 @@
 import { NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
 import pool from "@/lib/db";
+import { getAuthContext } from "@/lib/workspace";
+import { logAuditEvent } from "@/lib/audit";
 
 // GET - Obtener un custom challenge específico
 export async function GET(request, { params }) {
     try {
-        const token = request.headers.get('authorization')?.replace('Bearer ', '');
-
-        if (!token) {
+        const auth = await getAuthContext(request);
+        if (auth.error) {
             return NextResponse.json(
-                { error: 'Token no proporcionado' },
-                { status: 401 }
+                { error: auth.error },
+                { status: auth.status || 401 }
             );
         }
-
-        const decoded = await verifyToken(token);
         const { id } = await params;
 
         const query = `
@@ -23,7 +21,7 @@ export async function GET(request, { params }) {
       WHERE id = ? AND user_id = ?
     `;
 
-        const [challenges] = await pool.query(query, [id, decoded.userId]);
+        const [challenges] = await pool.query(query, [id, auth.userId]);
 
         if (challenges.length === 0) {
             return NextResponse.json(
@@ -52,23 +50,20 @@ export async function GET(request, { params }) {
 // PUT - Actualizar custom challenge (completar, marcar favorito, etc)
 export async function PUT(request, { params }) {
     try {
-        const token = request.headers.get('authorization')?.replace('Bearer ', '');
-
-        if (!token) {
+        const auth = await getAuthContext(request);
+        if (auth.error) {
             return NextResponse.json(
-                { error: 'Token no proporcionado' },
-                { status: 401 }
+                { error: auth.error },
+                { status: auth.status || 401 }
             );
         }
-
-        const decoded = await verifyToken(token);
         const { id } = await params;
         const { status, isFavorite, score } = await request.json();
 
         // Validar que el reto pertenece al usuario
         const [challenges] = await pool.query(
             "SELECT id FROM custom_challenges WHERE id = ? AND user_id = ?",
-            [id, decoded.userId]
+            [id, auth.userId]
         );
 
         if (challenges.length === 0) {
@@ -112,6 +107,18 @@ export async function PUT(request, { params }) {
 
         await pool.query(query, values);
 
+        await logAuditEvent({
+            workspaceId: auth.workspaceId,
+            userId: auth.userId,
+            action: "custom_challenge.update",
+            targetType: "custom_challenge",
+            targetId: id,
+            status: "success",
+            metadata: { status, isFavorite, score },
+            ipAddress: auth.requestMeta.ipAddress,
+            userAgent: auth.requestMeta.userAgent,
+        });
+
         return NextResponse.json({
             success: true,
             message: "Reto actualizado",
@@ -128,21 +135,18 @@ export async function PUT(request, { params }) {
 // DELETE - Eliminar un custom challenge
 export async function DELETE(request, { params }) {
     try {
-        const token = request.headers.get('authorization')?.replace('Bearer ', '');
-
-        if (!token) {
+        const auth = await getAuthContext(request);
+        if (auth.error) {
             return NextResponse.json(
-                { error: 'Token no proporcionado' },
-                { status: 401 }
+                { error: auth.error },
+                { status: auth.status || 401 }
             );
         }
-
-        const decoded = await verifyToken(token);
         const { id } = await params;
 
         const [result] = await pool.query(
             "DELETE FROM custom_challenges WHERE id = ? AND user_id = ?",
-            [id, decoded.userId]
+            [id, auth.userId]
         );
 
         if (result.affectedRows === 0) {
@@ -151,6 +155,17 @@ export async function DELETE(request, { params }) {
                 { status: 404 }
             );
         }
+
+        await logAuditEvent({
+            workspaceId: auth.workspaceId,
+            userId: auth.userId,
+            action: "custom_challenge.delete",
+            targetType: "custom_challenge",
+            targetId: id,
+            status: "success",
+            ipAddress: auth.requestMeta.ipAddress,
+            userAgent: auth.requestMeta.userAgent,
+        });
 
         return NextResponse.json({
             success: true,

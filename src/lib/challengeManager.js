@@ -3,6 +3,128 @@ import { saveCompletedChallengeToDB, getUserProgress, saveLearningPlanToDB, chec
 import challengeCache from './challengeCache';
 import eventEmitter, { EVENTS } from './events';
 
+const CAPABILITY_KEYS = [
+  "decomposicion",
+  "abstraccion",
+  "depuracion",
+  "diseno_apis",
+  "optimizacion",
+  "comunicacion_tecnica",
+];
+
+function getAdaptiveMemoryStorageKey(planId = "global") {
+  return `skillpilot_adaptive_memory_${planId}`;
+}
+
+function getDefaultAdaptiveMemory() {
+  return {
+    preferredMode: "tutor",
+    capabilityScores: {
+      decomposicion: 50,
+      abstraccion: 50,
+      depuracion: 50,
+      diseno_apis: 50,
+      optimizacion: 50,
+      comunicacion_tecnica: 50,
+    },
+    frictionPatterns: [],
+    winsPatterns: [],
+    lastUpdatedAt: null,
+  };
+}
+
+export async function getAdaptiveMemory() {
+  if (typeof window === "undefined") return getDefaultAdaptiveMemory();
+  try {
+    const plan = await getLearningPlan();
+    const key = getAdaptiveMemoryStorageKey(plan?.id || "global");
+    const raw = localStorage.getItem(key);
+    if (!raw) return getDefaultAdaptiveMemory();
+    const parsed = JSON.parse(raw);
+    return {
+      ...getDefaultAdaptiveMemory(),
+      ...parsed,
+      capabilityScores: {
+        ...getDefaultAdaptiveMemory().capabilityScores,
+        ...(parsed.capabilityScores || {}),
+      },
+    };
+  } catch {
+    return getDefaultAdaptiveMemory();
+  }
+}
+
+async function saveAdaptiveMemory(memory) {
+  if (typeof window === "undefined") return;
+  try {
+    const plan = await getLearningPlan();
+    const key = getAdaptiveMemoryStorageKey(plan?.id || "global");
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        ...memory,
+        lastUpdatedAt: new Date().toISOString(),
+      })
+    );
+  } catch (error) {
+    console.error("Error saving adaptive memory:", error);
+  }
+}
+
+export async function setPreferredLearningMode(mode) {
+  const safeMode = mode === "arena" ? "arena" : "tutor";
+  const memory = await getAdaptiveMemory();
+  memory.preferredMode = safeMode;
+  await saveAdaptiveMemory(memory);
+}
+
+export async function getPreferredLearningMode() {
+  const memory = await getAdaptiveMemory();
+  return memory.preferredMode || "tutor";
+}
+
+export async function getBottleneckCapability() {
+  const memory = await getAdaptiveMemory();
+  const entries = Object.entries(memory.capabilityScores || {});
+  if (!entries.length) return "decomposicion";
+  entries.sort((a, b) => a[1] - b[1]);
+  return entries[0][0];
+}
+
+async function updateAdaptiveMemoryFromEvaluation(evaluation, challenge) {
+  if (!evaluation || typeof evaluation !== "object") return;
+  const memory = await getAdaptiveMemory();
+  const dimensions = evaluation.dimensions || {};
+
+  CAPABILITY_KEYS.forEach((capability) => {
+    const mappedScore =
+      typeof dimensions[capability] === "number"
+        ? dimensions[capability]
+        : null;
+    if (mappedScore === null) return;
+
+    const current = memory.capabilityScores[capability] ?? 50;
+    memory.capabilityScores[capability] = Math.max(
+      0,
+      Math.min(100, Math.round(current * 0.75 + mappedScore * 0.25))
+    );
+  });
+
+  if (Array.isArray(evaluation.suggestions) && evaluation.suggestions.length > 0) {
+    const top = evaluation.suggestions.slice(0, 2).join(" | ");
+    memory.frictionPatterns = [top, ...(memory.frictionPatterns || [])].slice(0, 12);
+  }
+
+  if (evaluation.success && challenge?.title) {
+    memory.winsPatterns = [
+      `${challenge.title} (${evaluation.score || 0}%)`,
+      ...(memory.winsPatterns || []),
+    ].slice(0, 12);
+  }
+
+  await saveAdaptiveMemory(memory);
+}
+
 // Obtener historial de retos desde BD
 export async function getChallengeHistory() {
   if (typeof window === "undefined") return [];
@@ -128,6 +250,8 @@ export async function saveChallengeToHistory(
         planId: learningPlan.id
       });
     }
+
+    await updateAdaptiveMemoryFromEvaluation(evaluation, challenge);
   } catch (error) {
     console.error("Error saving challenge to history:", error);
   }
@@ -379,7 +503,7 @@ export async function getLearningPlan() {
 }
 
 // Utilidades para generar retos
-export async function generateChallenge(challengeIndex = 0) {
+export async function generateChallenge(challengeIndex = 0, options = {}) {
   const plan = await getLearningPlan();
 
   if (!plan) {
@@ -407,6 +531,19 @@ export async function generateChallenge(challengeIndex = 0) {
       concepts: entry.challenge.concepts || [],
     }));
 
+  const adaptiveMemory = await getAdaptiveMemory();
+  const preferredMode = options.learningMode || adaptiveMemory.preferredMode || "tutor";
+  const bottleneckCapability = await getBottleneckCapability();
+  const recentScores = planHistory
+    .slice(-5)
+    .map((entry) => entry?.evaluation?.score)
+    .filter((score) => typeof score === "number");
+
+  const scoreTrend =
+    recentScores.length > 0
+      ? Math.round(recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length)
+      : null;
+
   try {
     const response = await fetch("/api/ai/challenges", {
       method: "POST",
@@ -419,6 +556,17 @@ export async function generateChallenge(challengeIndex = 0) {
         language: plan.language,
         currentChallenge: challengeIndex,
         previousChallenges,
+        learningMode: preferredMode,
+        bottleneckCapability,
+        capabilityScores: adaptiveMemory.capabilityScores,
+        personalStyleMemory: {
+          frictionPatterns: adaptiveMemory.frictionPatterns?.slice(0, 3) || [],
+          winsPatterns: adaptiveMemory.winsPatterns?.slice(0, 3) || [],
+        },
+        recentPerformance: {
+          recentScores,
+          averageScore: scoreTrend,
+        },
       }),
     });
 

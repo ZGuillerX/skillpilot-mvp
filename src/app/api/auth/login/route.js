@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { comparePassword, generateToken, generateId, getTokenExpiration } from '@/lib/auth';
+import { logAuditEvent } from '@/lib/audit';
 
 export async function POST(request) {
     try {
@@ -52,8 +53,35 @@ export async function POST(request) {
             [user.id]
         );
 
+        let workspaceId = null;
+        let workspaceRole = null;
+
+        try {
+            const [memberships] = await pool.query(
+                `
+                SELECT
+                    COALESCE(u.current_workspace_id, wm.workspace_id) AS workspace_id,
+                    wm.role
+                FROM users u
+                LEFT JOIN workspace_members wm
+                  ON wm.user_id = u.id
+                 AND wm.status = 'active'
+                 AND (wm.workspace_id = u.current_workspace_id OR u.current_workspace_id IS NULL)
+                WHERE u.id = ?
+                ORDER BY FIELD(wm.role, 'owner', 'admin', 'member', 'viewer')
+                LIMIT 1
+                `,
+                [user.id]
+            );
+
+            workspaceId = memberships?.[0]?.workspace_id || null;
+            workspaceRole = memberships?.[0]?.role || null;
+        } catch (workspaceError) {
+            console.warn('No se pudo resolver workspace en login:', workspaceError?.message || workspaceError);
+        }
+
         // Crear sesión
-        const token = generateToken(user.id, user.email);
+        const token = generateToken(user.id, user.email, workspaceId, workspaceRole);
         const sessionId = generateId();
         const expiresAt = getTokenExpiration();
 
@@ -61,6 +89,18 @@ export async function POST(request) {
             'INSERT INTO sessions (id, user_id, token, expires_at) VALUES (?, ?, ?, ?)',
             [sessionId, user.id, token, expiresAt]
         );
+
+        await logAuditEvent({
+            workspaceId,
+            userId: user.id,
+            action: 'auth.login',
+            targetType: 'user',
+            targetId: user.id,
+            status: 'success',
+            metadata: { email: user.email },
+            ipAddress: request.headers.get('x-forwarded-for')?.split(',')?.[0]?.trim() || null,
+            userAgent: request.headers.get('user-agent') || null,
+        });
 
         return NextResponse.json({
             success: true,
@@ -71,6 +111,8 @@ export async function POST(request) {
                 avatar_url: user.avatar_url,
                 learning_goal: user.learning_goal,
                 preferred_language: user.preferred_language,
+                workspaceId,
+                role: workspaceRole,
             },
             token,
         });

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { askJSON } from "@/lib/ai/groq";
+import { getAuthContext, getWorkspaceSettings } from "@/lib/workspace";
+import { enforceWorkspaceQuota } from "@/lib/quota";
+import { logAuditEvent } from "@/lib/audit";
 
 const SYSTEM_CHALLENGES = `
 Eres un generador experto de retos de programación para SkillPilot.
@@ -88,6 +91,12 @@ EJEMPLOS DE BUENA PROGRESIÓN para JavaScript:
 `;
 
 function generateFallbackChallenge(index, language, difficulty, goal) {
+  const fallbackCapabilitiesByDifficulty = {
+    beginner: ["decomposicion", "depuracion"],
+    intermediate: ["abstraccion", "diseno_apis"],
+    advanced: ["optimizacion", "comunicacion_tecnica"],
+  };
+
   const byDifficulty = {
     beginner: [
       {
@@ -167,36 +176,84 @@ function generateFallbackChallenge(index, language, difficulty, goal) {
     exampleOutput: template.exampleOutput,
     concepts: template.concepts,
     estimatedTimeMinutes: template.estimatedTimeMinutes,
+    capabilities: fallbackCapabilitiesByDifficulty[difficulty] || ["decomposicion", "depuracion"],
+    projectTask: {
+      week: Math.floor(index / 5) + 1,
+      title: `Incremento semanal #${Math.floor(index / 5) + 1}`,
+      objective: "Integra este reto en un proyecto acumulativo con una mejora visible.",
+    },
   };
 }
 
-function getTargetDifficulty(currentChallenge, baseDifficulty) {
+function getTargetDifficulty(currentChallenge, baseDifficulty, recentPerformance, learningMode) {
+  const avg = recentPerformance?.averageScore;
+  const isArena = learningMode === "arena";
+  const performanceBoost = typeof avg === "number" && avg >= 88 ? 1 : 0;
+  const performanceRelief = typeof avg === "number" && avg <= 55 ? -1 : 0;
+
+  const offset = (isArena ? 1 : 0) + performanceBoost + performanceRelief;
+
   if (baseDifficulty === "beginner") {
-    if (currentChallenge < 5) return "beginner";
-    if (currentChallenge < 10) return "intermediate";
+    if (currentChallenge + offset < 5) return "beginner";
+    if (currentChallenge + offset < 10) return "intermediate";
     return "advanced";
   }
 
   if (baseDifficulty === "intermediate") {
-    if (currentChallenge < 3) return "beginner";
-    if (currentChallenge < 10) return "intermediate";
+    if (currentChallenge + offset < 3) return "beginner";
+    if (currentChallenge + offset < 10) return "intermediate";
     return "advanced";
   }
 
   // advanced
-  if (currentChallenge < 2) return "beginner";
-  if (currentChallenge < 5) return "intermediate";
+  if (currentChallenge + offset < 2) return "beginner";
+  if (currentChallenge + offset < 5) return "intermediate";
   return "advanced";
+}
+
+function getSecondaryCapability(primary) {
+  const map = {
+    decomposicion: "depuracion",
+    abstraccion: "diseno_apis",
+    depuracion: "decomposicion",
+    diseno_apis: "comunicacion_tecnica",
+    optimizacion: "abstraccion",
+    comunicacion_tecnica: "diseno_apis",
+  };
+  return map[primary] || "depuracion";
 }
 
 export async function POST(req) {
   try {
+    const auth = await getAuthContext(req);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status || 401 });
+    }
+
+    const quota = await enforceWorkspaceQuota({
+      workspaceId: auth.workspaceId,
+      metric: "ai_generate",
+      increment: 1,
+    });
+
+    if (!quota.allowed) {
+      return NextResponse.json(
+        { error: "Limite diario alcanzado para generacion de retos", quota },
+        { status: 429 }
+      );
+    }
+
     const {
       goal,
       level,
       language,
       currentChallenge = 0,
       previousChallenges = [],
+      learningMode = "tutor",
+      bottleneckCapability = "decomposicion",
+      capabilityScores = {},
+      personalStyleMemory = {},
+      recentPerformance = {},
     } = await req.json();
 
     if (!goal || !level || !language) {
@@ -206,7 +263,27 @@ export async function POST(req) {
       );
     }
 
-    const targetDifficulty = getTargetDifficulty(currentChallenge, level);
+    const targetDifficulty = getTargetDifficulty(
+      currentChallenge,
+      level,
+      recentPerformance,
+      learningMode
+    );
+
+    const workspaceSettings = await getWorkspaceSettings(auth.workspaceId);
+    const maxHintsPerChallenge = Math.max(
+      1,
+      Number(workspaceSettings?.guardrails?.maxHintsPerChallenge ?? 3)
+    );
+
+    const primaryCapability = bottleneckCapability || "decomposicion";
+    const secondaryCapability = getSecondaryCapability(primaryCapability);
+    const capabilitiesFocus = [primaryCapability, secondaryCapability];
+    const modeHints = learningMode === "arena"
+      ? "Modo Arena: minimiza pistas, exige mayor robustez, casos borde y calidad tecnica estricta."
+      : "Modo Tutor: da contexto pedagogico, ejemplos claros y pistas graduales para aprender mejor.";
+
+    const projectWeek = Math.floor(currentChallenge / 5) + 1;
 
     const userPrompt = {
       goal,
@@ -231,6 +308,15 @@ export async function POST(req) {
         4. Incluir conceptos relevantes para ${goal}
         5. Tener descripción clara con ejemplo de entrada y salida
         6. Ser alcanzable — no frustrante
+        7. Enfocar 1-2 capacidades cognitivas: ${capabilitiesFocus.join(", ")}
+        8. Incluir una tarea de proyecto vivo para esta semana (${projectWeek})
+
+        ${modeHints}
+
+        Memoria de estilo personal:
+        - Fricciones detectadas recientes: ${(personalStyleMemory?.frictionPatterns || []).join(" | ") || "sin datos"}
+        - Patrones de exito: ${(personalStyleMemory?.winsPatterns || []).join(" | ") || "sin datos"}
+        - Puntajes de capacidades actuales: ${JSON.stringify(capabilityScores || {})}
 
         ${currentChallenge === 0
           ? "Este es el PRIMER reto. Debe ser muy simple y accesible para alguien que está comenzando."
@@ -282,7 +368,7 @@ export async function POST(req) {
         ? result.challenge.acceptanceCriteria
         : ["El código ejecuta sin errores", "Cumple con los requisitos", "Devuelve el resultado correcto"],
       hints: Array.isArray(result.challenge.hints)
-        ? result.challenge.hints
+        ? result.challenge.hints.slice(0, maxHintsPerChallenge)
         : ["Lee el ejemplo con cuidado", "Empieza con el caso más simple"],
       exampleInput: result.challenge.exampleInput || null,
       exampleOutput: result.challenge.exampleOutput || null,
@@ -292,9 +378,37 @@ export async function POST(req) {
       estimatedTimeMinutes: typeof result.challenge.estimatedTimeMinutes === "number"
         ? result.challenge.estimatedTimeMinutes
         : 15,
+      capabilities: Array.isArray(result.challenge.capabilities) && result.challenge.capabilities.length > 0
+        ? result.challenge.capabilities.slice(0, 2)
+        : capabilitiesFocus,
+      projectTask: result.challenge.projectTask && typeof result.challenge.projectTask === "object"
+        ? result.challenge.projectTask
+        : {
+          week: projectWeek,
+          title: `Proyecto vivo - Semana ${projectWeek}`,
+          objective: "Integra este reto como un bloque reutilizable en tu proyecto acumulativo.",
+        },
     };
 
-    return NextResponse.json({ challenge }, { status: 200 });
+    await logAuditEvent({
+      workspaceId: auth.workspaceId,
+      userId: auth.userId,
+      action: "ai.challenge.generate",
+      targetType: "challenge",
+      targetId: challenge.id,
+      status: "success",
+      metadata: {
+        level,
+        language,
+        difficulty: challenge.difficulty,
+        learningMode,
+        quotaRemaining: quota.remaining,
+      },
+      ipAddress: auth.requestMeta.ipAddress,
+      userAgent: auth.requestMeta.userAgent,
+    });
+
+    return NextResponse.json({ challenge, quota }, { status: 200 });
   } catch (error) {
     console.error("Error generando reto:", error);
     return NextResponse.json(

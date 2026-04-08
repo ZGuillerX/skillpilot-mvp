@@ -1,11 +1,27 @@
 // app/api/ai/evaluate-code/route.js
 import { askJSON } from "../../../../lib/ai/groq.js";
+import { getAuthContext } from "@/lib/workspace";
+import { enforceWorkspaceQuota } from "@/lib/quota";
+import { logAuditEvent } from "@/lib/audit";
 
 // Tecnologías que NO deben validarse con `new Function()` (no son JS puro)
 const SKIP_SYNTAX_CHECK = [
   "typescript", "angular", "vue", "python", "java", "kotlin",
   "swift", "rust", "go", "cpp", "c#", "php", "ruby", "dart",
 ];
+
+const DEFAULT_DIMENSIONS = {
+  correccion: 0,
+  claridad: 0,
+  robustez: 0,
+  complejidad: 0,
+  comunicacion_tecnica: 0,
+  decomposicion: 0,
+  abstraccion: 0,
+  depuracion: 0,
+  diseno_apis: 0,
+  optimizacion: 0,
+};
 
 function shouldSkipSyntaxCheck(language) {
   if (!language) return true;
@@ -27,7 +43,35 @@ function combineFilesForEvaluation(files) {
 
 export async function POST(request) {
   try {
-    const { code, files, challenge } = await request.json();
+    const auth = await getAuthContext(request);
+    if (auth.error) {
+      return Response.json(
+        { error: auth.error },
+        { status: auth.status || 401 }
+      );
+    }
+
+    const quota = await enforceWorkspaceQuota({
+      workspaceId: auth.workspaceId,
+      metric: "ai_evaluate",
+      increment: 1,
+    });
+
+    if (!quota.allowed) {
+      return Response.json(
+        {
+          success: false,
+          score: 0,
+          feedback: "Limite diario alcanzado para evaluaciones.",
+          suggestions: ["Intenta nuevamente mañana o ajusta las cuotas del workspace"],
+          filesFeedback: [],
+          quota,
+        },
+        { status: 429 }
+      );
+    }
+
+    const { code, files, challenge, learningMode = "tutor" } = await request.json();
 
     if (!challenge) {
       return Response.json(
@@ -74,15 +118,36 @@ export async function POST(request) {
   "score": number (0-100),
   "feedback": "string",
   "suggestions": ["string"],
-  "filesFeedback": [{"filename": "string", "status": "ok|warning|error", "comment": "string"}]
+      "filesFeedback": [{"filename": "string", "status": "ok|warning|error", "comment": "string"}],
+      "dimensions": {
+        "correccion": number,
+        "claridad": number,
+        "robustez": number,
+        "complejidad": number,
+        "comunicacion_tecnica": number,
+        "decomposicion": number,
+        "abstraccion": number,
+        "depuracion": number,
+        "diseno_apis": number,
+        "optimizacion": number
+      },
+      "feedbackLayers": {
+        "rapido": "string breve",
+        "tecnico": "string tecnico",
+        "profundo": "string detallado"
+      }
 }
 
 ## Contexto de evaluación
 ${isMultiFile ? `Este reto usa MÚLTIPLES ARCHIVOS: ${fileNames}. Evalúa la coherencia entre todos los archivos, no solo uno.` : "Este reto usa un solo archivo."}
+Modo de evaluacion: ${learningMode}
+${learningMode === "arena"
+        ? "En modo Arena, se mas estricto: exige mayor robustez, valida casos borde y evita regalar puntos por soluciones parciales fragiles."
+        : "En modo Tutor, mantén enfoque pedagógico y explica mejoras de manera guiada."}
 
 ## Lenguaje: ${challenge.language}
 ${challenge.language?.toLowerCase().includes("angular") || challenge.language?.toLowerCase().includes("typescript")
-  ? `
+        ? `
 REGLAS ESPECIALES PARA TYPESCRIPT/ANGULAR:
 - Los decoradores (@Component, @NgModule, @Injectable) son sintaxis VÁLIDA — jamás los marques como error
 - Las anotaciones de tipo (: void, : string, : number) son sintaxis VÁLIDA de TypeScript
@@ -90,7 +155,7 @@ REGLAS ESPECIALES PARA TYPESCRIPT/ANGULAR:
 - La ausencia de compilación real NO implica error — evalúa la INTENCIÓN y LÓGICA del código
 - Un componente bien estructurado con la lógica correcta en ngOnInit = código válido
 `
-  : ""}
+        : ""}
 
 ## Proceso de evaluación (en orden)
 
@@ -179,9 +244,36 @@ REGLAS ESPECIALES PARA TYPESCRIPT/ANGULAR:
       filesFeedback: Array.isArray(evaluation.filesFeedback)
         ? evaluation.filesFeedback
         : [],
+      dimensions: {
+        ...DEFAULT_DIMENSIONS,
+        ...(evaluation.dimensions || {}),
+      },
+      feedbackLayers: {
+        rapido: evaluation?.feedbackLayers?.rapido || evaluation.feedback || "Sin resumen rapido.",
+        tecnico: evaluation?.feedbackLayers?.tecnico || "Sin detalle tecnico.",
+        profundo: evaluation?.feedbackLayers?.profundo || "Sin analisis profundo.",
+      },
     };
 
-    return Response.json(result);
+    await logAuditEvent({
+      workspaceId: auth.workspaceId,
+      userId: auth.userId,
+      action: "ai.challenge.evaluate",
+      targetType: "challenge",
+      targetId: challenge?.id || null,
+      status: "success",
+      metadata: {
+        language: challenge?.language,
+        score: result.score,
+        success: result.success,
+        learningMode,
+        quotaRemaining: quota.remaining,
+      },
+      ipAddress: auth.requestMeta.ipAddress,
+      userAgent: auth.requestMeta.userAgent,
+    });
+
+    return Response.json({ ...result, quota });
   } catch (error) {
     console.error("Error evaluating code:", error);
     return Response.json(

@@ -13,9 +13,9 @@ export async function comparePassword(password, hash) {
     return await bcrypt.compare(password, hash);
 }
 
-export function generateToken(userId, email) {
+export function generateToken(userId, email, workspaceId = null, role = null) {
     return jwt.sign(
-        { userId, email },
+        { userId, email, workspaceId, role },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
     );

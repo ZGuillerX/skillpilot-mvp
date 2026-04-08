@@ -232,3 +232,58 @@ export async function switchPlan(planId) {
         throw error;
     }
 }
+
+// Obtener tablero de proyecto vivo por plan
+export async function getLiveProjectBoard(planId) {
+    try {
+        const token = Cookies.get('token');
+        if (!token || !planId) return null;
+
+        const response = await fetch(`/api/user/progress/project?planId=${encodeURIComponent(planId)}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        return data.board || null;
+    } catch (error) {
+        console.error('Error fetching live project board:', error);
+        return null;
+    }
+}
+
+// Guardar/actualizar una semana del tablero de proyecto vivo
+export async function saveLiveProjectWeek({ planId, week, title, objective, tasks }) {
+    try {
+        const token = Cookies.get('token');
+        if (!token) throw new Error('Usuario no autenticado');
+
+        const response = await fetch('/api/user/progress/project', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                planId,
+                week,
+                title,
+                objective,
+                tasks,
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Error guardando proyecto vivo');
+        }
+
+        return data.board;
+    } catch (error) {
+        console.error('Error saving live project week:', error);
+        throw error;
+    }
+}
