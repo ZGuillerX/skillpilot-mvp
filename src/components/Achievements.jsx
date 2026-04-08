@@ -15,6 +15,7 @@ import {
   BrainIcon,
   LightningIcon,
   GlobeIcon,
+  RocketIcon,
 } from "./ui/Icons";
 
 /**
@@ -92,6 +93,27 @@ const ACHIEVEMENTS = {
     icon: <GlobeIcon className="w-12 h-12" />,
     color: "from-teal-500 to-green-500",
   },
+  customChallengeCreator: {
+    id: "custom_challenge_creator",
+    title: "Creador de Retos",
+    description: "Genera tu primer reto personalizado con IA",
+    icon: <BrainIcon className="w-12 h-12" />,
+    color: "from-violet-500 to-purple-500",
+  },
+  customChallengeCollector: {
+    id: "custom_challenge_collector",
+    title: "Coleccionista de Retos",
+    description: "Crea 5 retos personalizados",
+    icon: <RocketIcon className="w-12 h-12" />,
+    color: "from-fuchsia-500 to-pink-500",
+  },
+  favoriteMaster: {
+    id: "favorite_master",
+    title: "Aficionado a Favoritos",
+    description: "Agrega 5 retos a tu sección de favoritos",
+    icon: <StarIcon className="w-12 h-12" filled />,
+    color: "from-amber-500 to-yellow-500",
+  },
 };
 
 /**
@@ -112,7 +134,7 @@ export function checkAchievements(stats, history) {
 
   // Score perfecto
   const hasPerfectScore = history.some(
-    (entry) => entry.evaluation?.score === 100
+    (entry) => entry.evaluation?.score === 100,
   );
   if (hasPerfectScore) {
     unlocked.push(ACHIEVEMENTS.perfectScore);
@@ -120,7 +142,7 @@ export function checkAchievements(stats, history) {
 
   // Sin pistas (implementar tracking de pistas usado)
   const hasNoHintsChallenge = history.some(
-    (entry) => entry.evaluation?.success && entry.hintsUsed === 0
+    (entry) => entry.evaluation?.success && entry.hintsUsed === 0,
   );
   if (hasNoHintsChallenge) {
     unlocked.push(ACHIEVEMENTS.noHints);
@@ -128,7 +150,7 @@ export function checkAchievements(stats, history) {
 
   // Múltiples lenguajes
   const languages = new Set(
-    history.map((entry) => entry.challenge?.language).filter(Boolean)
+    history.map((entry) => entry.challenge?.language).filter(Boolean),
   );
   if (languages.size >= 3) {
     unlocked.push(ACHIEVEMENTS.multiLanguage);
@@ -137,7 +159,7 @@ export function checkAchievements(stats, history) {
   // Reto rápido (menos de 5 minutos = 300 segundos)
   const hasFastSolve = history.some(
     (entry) =>
-      entry.evaluation?.success && entry.timeSpent && entry.timeSpent < 300
+      entry.evaluation?.success && entry.timeSpent && entry.timeSpent < 300,
   );
   if (hasFastSolve) {
     unlocked.push(ACHIEVEMENTS.fastSolver);
@@ -239,7 +261,7 @@ export default function AchievementsGrid({ stats = {}, history = [] }) {
       current: currentIds,
       previous: previousIds,
       new: newIds,
-      previousSize: previousUnlockedIds.size
+      previousSize: previousUnlockedIds.size,
     });
 
     // Solo mostrar notificaciones si ya había logros previos (no es la primera carga)
@@ -247,7 +269,7 @@ export default function AchievementsGrid({ stats = {}, history = [] }) {
       // Mostrar notificación para cada nuevo logro
       newIds.forEach((achievementId) => {
         const achievement = unlockedAchievements.find(
-          (a) => a.id === achievementId
+          (a) => a.id === achievementId,
         );
         if (achievement) {
           console.log("🎉 MOSTRANDO NOTIFICACIÓN:", achievement.title);
@@ -258,7 +280,9 @@ export default function AchievementsGrid({ stats = {}, history = [] }) {
         }
       });
     } else if (previousUnlockedIds.size === 0) {
-      console.log("💾 Primera carga - guardando logros iniciales sin notificaciones");
+      console.log(
+        "💾 Primera carga - guardando logros iniciales sin notificaciones",
+      );
     }
 
     // Actualizar el set de logros previos

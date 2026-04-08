@@ -1,0 +1,143 @@
+import { NextResponse } from "next/server";
+import { askJSON } from "@/lib/ai/groq";
+import { verifyToken } from "@/lib/auth";
+import pool from "@/lib/db";
+import { v4 as uuidv4 } from "uuid";
+
+const SYSTEM_CUSTOM_CHALLENGES = `
+Eres un generador experto de retos de programación personalizados para SkillPilot.
+Basándote en la idea o descripción que el usuario proporciona, generarás un reto PRÁCTICO,
+CLARO y MOTIVADOR.
+
+REGLAS CRÍTICAS:
+- Genera retos basados EXACTAMENTE en lo que el usuario describe
+- Si el usuario no especifica dificultad, infiere una dificultad basada en la complejidad
+- Asegúrate de que el reto sea alcanzable pero desafiante
+- Proporciona criterios de aceptación CLAROS y verificables
+- Incluye pistas útiles que NO revelen la solución
+- Adapta el tiempo estimado a la dificultad
+
+RESPONDE EXCLUSIVAMENTE EN JSON con esta estructura EXACTA:
+
+{
+  "challenge": {
+    "id": "string-uuid",
+    "title": "string - título conciso y motivador",
+    "description": "string - descripción detallada del problema",
+    "language": "string - lenguaje de programación",
+    "difficulty": "beginner|intermediate|advanced",
+    "acceptanceCriteria": ["criterio1", "criterio2", "criterio3"],
+    "hints": ["pista1", "pista2", "pista3"],
+    "exampleInput": "string (si aplica)",
+    "exampleOutput": "string (si aplica)",
+    "concepts": ["concepto1", "concepto2"],
+    "estimatedTimeMinutes": number
+  }
+}
+
+INSTRUCCIONES DE GENERACIÓN:
+1. Lee cuidadosamente la idea del usuario
+2. Interpreta la intención y el nivel esperado
+3. Expande la idea en un reto completo y bien definido
+4. Genera un título que sea motivador y específico
+5. Proporciona criterios de aceptación measurables
+6. Incluye ejemplos cuando sea relevante
+7. Estima un tiempo realista de completación
+
+ESTILO:
+- Mantén un tono profesional pero accesible
+- Sé específico en los requisitos
+- Proporciona contexto práctico cuando sea posible
+`;
+
+export async function POST(request) {
+    try {
+        // Verificar autenticación
+        const token = request.headers.get('authorization')?.replace('Bearer ', '');
+
+        if (!token) {
+            return NextResponse.json(
+                { error: 'Token no proporcionado' },
+                { status: 401 }
+            );
+        }
+
+        const decoded = await verifyToken(token);
+        const { idea, language, difficulty } = await request.json();
+
+        // Validar entrada
+        if (!idea || idea.trim().length < 10) {
+            return NextResponse.json(
+                { error: "La idea debe tener al menos 10 caracteres" },
+                { status: 400 }
+            );
+        }
+
+        if (!language || language.trim().length === 0) {
+            return NextResponse.json(
+                { error: "El lenguaje de programación es requerido" },
+                { status: 400 }
+            );
+        }
+
+        // Construir prompt
+        const prompt = `
+El usuario quiere crear un reto personalizado con la siguiente idea:
+
+Idea: ${idea}
+Lenguaje: ${language}
+${difficulty ? `Dificultad sugerida: ${difficulty}` : ""}
+
+Basándote en esta información, genera un reto completo de programación.
+`;
+
+        // Llamar a IA
+        const result = await askJSON({
+            system: SYSTEM_CUSTOM_CHALLENGES,
+            user: prompt,
+        });
+
+        if (!result || !result.challenge) {
+            return NextResponse.json(
+                { error: "No se pudo generar el reto" },
+                { status: 500 }
+            );
+        }
+
+        // Generar ID si no existe
+        const challenge = result.challenge;
+        if (!challenge.id) {
+            challenge.id = uuidv4();
+        }
+
+        // Guardar en base de datos
+        const customChallengeId = uuidv4();
+        const now = new Date();
+
+        const query = `
+      INSERT INTO custom_challenges 
+      (id, user_id, challenge_data, status, created_at, updated_at)
+      VALUES (?, ?, ?, 'generated', ?, ?)
+    `;
+
+        await pool.query(query, [
+            customChallengeId,
+            decoded.userId,
+            JSON.stringify(challenge),
+            now,
+            now,
+        ]);
+
+        return NextResponse.json({
+            success: true,
+            customChallengeId,
+            challenge,
+        });
+    } catch (error) {
+        console.error("Error generando reto personalizado:", error);
+        return NextResponse.json(
+            { error: "Error al generar el reto" },
+            { status: 500 }
+        );
+    }
+}

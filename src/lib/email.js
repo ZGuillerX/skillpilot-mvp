@@ -133,7 +133,7 @@ export async function sendWelcomeEmail(email, name) {
                     <ul>
                         <li>📚 Crear planes de aprendizaje personalizados con IA</li>
                         <li>💻 Resolver desafíos de programación progresivos</li>
-                        <li>🎯 Recibir retroalimentación inteligente en tiempo real</li>
+                        <li> Recibir retroalimentación inteligente en tiempo real</li>
                         <li>📊 Seguimiento de tu progreso con analytics</li>
                         <li>🏆 Ganar logros y insignias</li>
                     </ul>

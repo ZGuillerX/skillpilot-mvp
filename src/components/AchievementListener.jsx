@@ -23,11 +23,11 @@ export default function AchievementListener() {
 
       const history =
         progress?.challenge_history?.filter(
-          (entry) => entry.planId === currentPlan.id
+          (entry) => entry.planId === currentPlan.id,
         ) || [];
 
       const completedChallenges = history.filter(
-        (entry) => entry.evaluation?.success
+        (entry) => entry.evaluation?.success,
       ).length;
 
       const scores = history
@@ -37,7 +37,7 @@ export default function AchievementListener() {
       const averageScore =
         scores.length > 0
           ? Math.round(
-              scores.reduce((sum, score) => sum + score, 0) / scores.length
+              scores.reduce((sum, score) => sum + score, 0) / scores.length,
             )
           : 0;
 
@@ -51,7 +51,7 @@ export default function AchievementListener() {
       const unlockedAchievements = checkAchievements(stats, history);
       const currentUnlockedIds = new Set(unlockedAchievements.map((a) => a.id));
 
-      console.log("🎯 AchievementListener - Verificando logros:", {
+      console.log(" AchievementListener - Verificando logros:", {
         completed: stats.completed,
         historyLength: history.length,
         unlockedCount: currentUnlockedIds.size,
@@ -63,13 +63,13 @@ export default function AchievementListener() {
       if (isInitializedRef.current) {
         // Encontrar nuevos logros
         const newAchievements = unlockedAchievements.filter(
-          (achievement) => !previousUnlockedRef.current.has(achievement.id)
+          (achievement) => !previousUnlockedRef.current.has(achievement.id),
         );
 
         if (newAchievements.length > 0) {
           console.log(
             "🎉 NUEVOS LOGROS DETECTADOS:",
-            newAchievements.map((a) => a.title)
+            newAchievements.map((a) => a.title),
           );
 
           // Mostrar notificación para cada nuevo logro
@@ -99,7 +99,7 @@ export default function AchievementListener() {
     // Escuchar eventos de retos completados
     const handleChallengeCompleted = () => {
       console.log(
-        "🔔 Evento de reto completado recibido - verificando logros..."
+        "🔔 Evento de reto completado recibido - verificando logros...",
       );
       // Esperar un poco para que se guarde el reto
       setTimeout(() => {
