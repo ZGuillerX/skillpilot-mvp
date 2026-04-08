@@ -94,7 +94,6 @@ export default function Navbar() {
           />
         </svg>
       ),
-      badge: "Pro",
     },
     {
       name: "Construir",

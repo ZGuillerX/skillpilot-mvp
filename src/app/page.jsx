@@ -68,10 +68,10 @@ export default function Home() {
   }, [user, currentPlan]);
 
   const stats = [
-    { value: "10K+", label: "Desarrolladores" },
-    { value: "500+", label: "Retos Disponibles" },
-    { value: "98%", label: "Satisfaccion" },
-    { value: "24/7", label: "IA Disponible" },
+    { value: "∞", label: "Retos Generados" },
+    { value: "10+", label: "Lenguajes" },
+    { value: "IA", label: "Personalizada" },
+    { value: "24/7", label: "Disponible" },
   ];
 
   const features = [
@@ -408,8 +408,8 @@ export default function Home() {
               <span className="text-gradient"> Empezar?</span>
             </h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Unete a miles de desarrolladores que ya estan transformando su
-              carrera con SkillPilot. Tu primer reto te espera.
+              Mejora tus habilidades de programación con retos personalizados
+              por IA. Tu primer reto te espera.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
